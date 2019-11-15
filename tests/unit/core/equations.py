@@ -3,10 +3,10 @@ import unittest
 import numpy as np
 from scipy.sparse import csc_matrix
 
-from core import mat_from_tuples
-from core import FiringGraph
-from core.imputer import DoubleArrayImputer
-from core.solver import FiringGraphDrainer
+from core.data_structure.utils import mat_from_tuples
+from core.data_structure.graph import FiringGraph
+from core.imputer.array import DoubleArrayImputer
+from core.solver.drainer import FiringGraphDrainer
 from utils.nmp import NumpyDriver
 
 __maintainer__ = 'Pierre Gouedard'

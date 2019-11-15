@@ -1,5 +1,5 @@
 # Global import
-from scipy.sparse import lil_matrix, csc_matrix, csr_matrix, vstack
+from scipy.sparse import csc_matrix, csr_matrix, vstack
 from numpy import newaxis
 
 # Local import
@@ -12,7 +12,7 @@ def fti(imputer, firing_graph, batch_size):
     :param imputer:
     :type imputer: deyep.core.imputer.comon.Imputer
     :param firing_graph:
-    :type firing_graph: deyep.core.firing_graph.graph.FiringGraph
+    :type firing_graph: deyep.core.data_structure.graph.FiringGraph
     :param: batch_size: size of forward batch
     :type: int
     :return: Forward signal of input vertice

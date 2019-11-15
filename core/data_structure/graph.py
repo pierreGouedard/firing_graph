@@ -6,8 +6,7 @@ from scipy.sparse import lil_matrix
 import copy
 
 # Local import
-import settings
-from core.firing_graph import utils
+from core.data_structure import utils
 from utils.driver import FileDriver
 
 driver = FileDriver('graph_file_driver', '')
@@ -26,7 +25,6 @@ class FiringGraph(object):
             graph_id = ''.join([random.choice(string.ascii_letters) for _ in range(5)])
 
         self.project = project
-        self.dir_graph = settings.deyep_graph_path.format(project)
         self.graph_id = graph_id
         self.is_drained = is_drained
 
@@ -180,13 +178,10 @@ class FiringGraph(object):
 
         return fg
 
-    def save(self):
-        if not driver.exists(self.dir_graph):
-            driver.makedirs(self.dir_graph)
-
+    def save(self, path):
         d_graph = self.to_dict()
 
-        with open(driver.join(self.dir_graph, '{}.pckl'.format(self.graph_id)), 'wb') as handle:
+        with open(path, 'wb') as handle:
             pickle.dump(d_graph, handle)
 
     def to_dict(self, is_copy=False):
@@ -200,10 +195,6 @@ class FiringGraph(object):
             d_graph.update({'matrices': copy.deepcopy(self.matrices), 'levels': self.levels.copy()})
 
         return d_graph
-
-    def delete(self):
-        if driver.exists(driver.join(self.dir_graph, '{}.pckl'.format(self.graph_id))):
-            driver.remove(driver.join(self.dir_graph, '{}.pckl'.format(self.graph_id)))
 
     def copy(self):
         return self.from_dict(self.to_dict(is_copy=True), self.project, self.graph_id)

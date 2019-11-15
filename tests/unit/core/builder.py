@@ -3,10 +3,8 @@ import unittest
 import numpy as np
 
 # Local import
-from core import mat_from_tuples
-from core import FiringGraph
-
-__maintainer__ = 'Pierre Gouedard'
+from core.data_structure.utils import mat_from_tuples
+from core.data_structure.graph import FiringGraph
 
 
 class TestBuilder(unittest.TestCase):

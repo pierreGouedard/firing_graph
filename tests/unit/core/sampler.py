@@ -3,8 +3,8 @@ import unittest
 import numpy as np
 from scipy.sparse import csc_matrix
 
-from core.imputer import DoubleArrayImputer
-from core.solver import Sampler
+from core.imputer.array import DoubleArrayImputer
+from core.solver.sampler import Sampler
 
 from utils.nmp import NumpyDriver
 
