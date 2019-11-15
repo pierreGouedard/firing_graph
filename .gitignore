@@ -11,3 +11,7 @@ settings/local_settings.yml
 *.odg
 *.png
 *.out
+*.tex
+*.bbl
+*.bib
+*.zip
