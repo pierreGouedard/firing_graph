@@ -1,0 +1,17 @@
+*~
+*.pyc
+DATA/
+settings/local_settings.py
+settings/local_settings.yml
+*.sqlite3
+*.aux
+*.log
+*.blg
+*.synctex.gz
+*.odg
+*.png
+*.out
+*.tex
+*.bbl
+*.bib
+*.zip
