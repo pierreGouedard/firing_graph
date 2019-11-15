@@ -12,7 +12,7 @@ def buo(sax_ob, sax_cm, firing_graph):
     :param sax_cm: core forward signal memory
     :type: scipy.sparse.spmatrix
     :param firing_graph:
-    :type firing_graph: deyep.core.firing_graph.graph.FiringGraph
+    :type firing_graph: deyep.core.data_structure.graph.FiringGraph
     :return: Update of adjacency matrice
     :rtype: scipy.sparse.spmatrix
     """
@@ -33,7 +33,7 @@ def buc(sax_cb, sax_cm, firing_graph):
     :param sax_cm: core forward signal memory
     :type: sax_cm scipy.sparse.spmatrix
     :param firing_graph:
-    :type firing_graph: deyep.core.firing_graph.graph.FiringGraph
+    :type firing_graph: deyep.core.data_structure.graph.FiringGraph
     :return: update of adjacency matrix
     :rtype: scipy.sparse.spmatrix
     """
@@ -53,7 +53,7 @@ def bui(sax_cb, sax_im, firing_graph):
     :param sax_im: input forward signal memory
     :type: sax_im: scipy.sparse.spmatrix
     :param firing_graph:
-    :type firing_graph: deyep.core.firing_graph.graph.FiringGraph
+    :type firing_graph: deyep.core.data_structure.graph.FiringGraph
     :return: update of adjacency matrix
     :rtype: scipy.sparse.spmatrix
     """

@@ -3,11 +3,11 @@ import unittest
 from scipy.sparse import csc_matrix
 
 # Local import
-from core import gather_matrices
-from core.imputer import DoubleArrayImputer
+from core.data_structure.utils import gather_matrices
+from core.imputer.array import DoubleArrayImputer
 from utils.nmp import NumpyDriver
-from core.solver import FiringGraphDrainer
-from utils.interactive_plots import plot_graph
+from core.solver.drainer import FiringGraphDrainer
+from tests.utils.interactive_plots import plot_graph
 from tests.utils.test_pattern import AndPattern2 as ap2, AndPattern3 as ap3
 
 __maintainer__ = 'Pierre Gouedard'

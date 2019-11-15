@@ -3,8 +3,8 @@ import unittest
 import numpy as np
 from scipy.sparse import csc_matrix
 
-from core.imputer import DoubleArrayImputer
-from core.solver import Sampler
+from core.imputer.array import DoubleArrayImputer
+from core.solver.sampler import Sampler
 
 from utils.nmp import NumpyDriver
 
@@ -18,10 +18,10 @@ class TestSampler(unittest.TestCase):
         self.N = 100
         self.selected_bits = {0: {0, 1, 2, 3}, 1: {50, 51, 52}}
 
-        self.preselected_bits, bits = {0: {0, 1, 2, 3}, 1: {50, 51, 52}}, set(range(self.ni))
+        self.pselected_bits, bits = {0: {0, 1, 2, 3}, 1: {50, 51, 52}}, set(range(self.ni))
         for i in range(self.no):
-            self.preselected_bits[i] = self.preselected_bits[i].union(set(np.random.choice(list(bits), 30)))
-            bits = bits.difference(self.preselected_bits[i])
+            self.pselected_bits[i] = self.pselected_bits[i].union(set(np.random.choice(list(bits), 30)))
+            bits = bits.difference(self.pselected_bits[i])
 
         self.input = csc_matrix(np.random.binomial(1, 0.1, (100, self.ni)), dtype=int)
         self.output = csc_matrix(np.random.binomial(1, 0.1, (100, self.no)), dtype=int)
@@ -63,7 +63,9 @@ class TestSampler(unittest.TestCase):
         """
         # Create simple imputer and sampler
         imputer = init_imputer(self.input, self.output)
-        sampler = Sampler((self.ni, self.no), self.N, imputer, self.selected_bits, self.preselected_bits)
+        sampler = Sampler(
+            (self.ni, self.no), self.N, imputer, selected_bits=self.selected_bits, preselected_bits=self.pselected_bits
+        )
 
         # sample bits
         sampler.sample_supervised()
@@ -85,8 +87,8 @@ class TestSampler(unittest.TestCase):
         # Test level of core vertices
         for i in range(self.no):
             l_core_vetices = sampler.core_vertices[i]
-            self.assertEqual(
-                list(sampler.firing_graph.levels[[map(lambda x: int(x.split('_')[1]), l_core_vetices)]]),
+            self.assertTrue(
+                list(sampler.firing_graph.levels[list(map(lambda x: int(x.split('_')[1]), l_core_vetices))]),
                 [1, len(self.selected_bits[i]), 2]
             )
 

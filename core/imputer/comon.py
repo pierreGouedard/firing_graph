@@ -2,7 +2,6 @@
 import pickle
 
 # Local imports
-import settings
 from utils.driver import FileDriver
 base_driver = FileDriver('imputer file driver', '')
 
@@ -11,7 +10,6 @@ class Imputer(object):
 
     def __init__(self, project, dirin, dirout):
 
-        self.dir_imputer = settings.deyep_imputer_path.format(project)
         self.project = project
 
         self.dirin = dirin
@@ -46,18 +44,14 @@ class Imputer(object):
     def run_postprocessing(self, d_features):
         raise NotImplementedError
 
-    def save(self):
-        if not base_driver.exists(self.dir_imputer):
-            base_driver.makedirs(self.dir_imputer)
-
-        with open(base_driver.join(self.dir_imputer, 'imputer.pickle'), 'wb') as handle:
+    def save_as_pickle(self, path):
+        with open(path, 'wb') as handle:
             pickle.dump(self, handle)
 
     @staticmethod
-    def load(project):
-        pth = settings.deyep_imputer_path.format(project)
+    def load_pickle(path):
 
-        with open(base_driver.join(pth, 'imputer.pickle'), 'rb') as handle:
+        with open(path, 'rb') as handle:
             imputer = pickle.load(handle)
 
         return imputer

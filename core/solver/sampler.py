@@ -2,8 +2,8 @@
 import numpy as np
 
 # local import
-from core import mat_from_tuples
-from core import FiringGraph
+from core.data_structure.utils import mat_from_tuples
+from core.data_structure.graph import FiringGraph
 
 
 class Sampler(object):

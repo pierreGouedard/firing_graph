@@ -6,8 +6,7 @@ from scipy.sparse import lil_matrix
 import copy
 
 # Local import
-import settings
-from core.firing_graph import utils
+from core.data_structure import utils
 from utils.driver import FileDriver
 
 driver = FileDriver('graph_file_driver', '')
@@ -26,7 +25,6 @@ class FiringGraph(object):
             graph_id = ''.join([random.choice(string.ascii_letters) for _ in range(5)])
 
         self.project = project
-        self.dir_graph = settings.deyep_graph_path.format(project)
         self.graph_id = graph_id
         self.is_drained = is_drained
 
@@ -101,15 +99,22 @@ class FiringGraph(object):
         self.forward_firing['o'] += sax_o.sum(axis=0)
 
     def update_mask(self, t):
-        self.matrices['Im'] = self.matrices['Im'].multiply(self.backward_firing['i'] < t).multiply(self.I)
-        self.matrices['Cm'] = self.matrices['Cm'].multiply(self.backward_firing['c'] < t).multiply(self.C)
-        self.matrices['Om'] = self.matrices['Om'].multiply(self.backward_firing['o'] < t).multiply(self.O)
+
+        self.matrices['Im'] = self.clip_firing(self.matrices['Im'].multiply(self.I), self.backward_firing['i'], t)
+        self.matrices['Cm'] = self.clip_firing(self.matrices['Cm'].multiply(self.C), self.backward_firing['c'], t)
+        self.matrices['Om'] = self.clip_firing(self.matrices['Om'].multiply(self.O), self.backward_firing['o'], t)
 
     @staticmethod
-    def load(project, graph_id):
-        pth = driver.join(settings.deyep_graph_path.format(project), '{}.pckl'.format(graph_id))
+    def clip_firing(sax_mask, sax_bf, t):
+        for i, j in zip(*sax_mask.multiply(sax_bf).nonzero()):
+            if sax_bf[i, j] >= t:
+                sax_mask[i, j] = False
+        return sax_mask
 
-        with open(pth, 'rb') as handle:
+    @staticmethod
+    def load_pickle(path, project, graph_id=None):
+
+        with open(path, 'rb') as handle:
             d_graph = pickle.load(handle)
 
         return FiringGraph.from_dict(d_graph, project, graph_id=graph_id)
@@ -160,7 +165,7 @@ class FiringGraph(object):
 
         # Get dainer mask matrices
         d_mask = utils.mat_mask_from_vertice_mask(sax_I, sax_C, sax_O, mask_vertice_drain)
-        d_matrices = dict(d_mask.items() + [('Iw', sax_I), ('Cw', sax_C), ('Ow', sax_O)])
+        d_matrices = dict(list(d_mask.items()) + [('Iw', sax_I), ('Cw', sax_C), ('Ow', sax_O)])
 
         return FiringGraph(project, ax_levels, depth=depth, matrices=d_matrices, graph_id=graph_id)
 
@@ -180,13 +185,10 @@ class FiringGraph(object):
 
         return fg
 
-    def save(self):
-        if not driver.exists(self.dir_graph):
-            driver.makedirs(self.dir_graph)
-
+    def save_as_pickle(self, path):
         d_graph = self.to_dict()
 
-        with open(driver.join(self.dir_graph, '{}.pckl'.format(self.graph_id)), 'wb') as handle:
+        with open(path, 'wb') as handle:
             pickle.dump(d_graph, handle)
 
     def to_dict(self, is_copy=False):
@@ -200,10 +202,6 @@ class FiringGraph(object):
             d_graph.update({'matrices': copy.deepcopy(self.matrices), 'levels': self.levels.copy()})
 
         return d_graph
-
-    def delete(self):
-        if driver.exists(driver.join(self.dir_graph, '{}.pckl'.format(self.graph_id))):
-            driver.remove(driver.join(self.dir_graph, '{}.pckl'.format(self.graph_id)))
 
     def copy(self):
         return self.from_dict(self.to_dict(is_copy=True), self.project, self.graph_id)

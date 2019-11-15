@@ -2,7 +2,7 @@
 from utils.nmp import NumpyDriver
 
 # Local import
-from core.imputer import ImputerDoubleSource
+from core.imputer.comon import ImputerDoubleSource
 
 
 class DoubleArrayImputer(ImputerDoubleSource):

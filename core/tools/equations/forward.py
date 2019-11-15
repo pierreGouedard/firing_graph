@@ -1,5 +1,5 @@
 # Global import
-from scipy.sparse import lil_matrix, csc_matrix, csr_matrix, vstack
+from scipy.sparse import csc_matrix, csr_matrix, vstack
 from numpy import newaxis
 
 # Local import
@@ -12,7 +12,7 @@ def fti(imputer, firing_graph, batch_size):
     :param imputer:
     :type imputer: deyep.core.imputer.comon.Imputer
     :param firing_graph:
-    :type firing_graph: deyep.core.firing_graph.graph.FiringGraph
+    :type firing_graph: deyep.core.data_structure.graph.FiringGraph
     :param: batch_size: size of forward batch
     :type: int
     :return: Forward signal of input vertice
@@ -91,7 +91,9 @@ def fpc(sax_c, sax_cm, ax_levels):
     :rtype: scipy.sparse.spmatrix
     """
     # Compare forward strength to level for activation
-    sax_c = (sax_c >= csc_matrix(ax_levels[newaxis, :].repeat(sax_c.shape[0], axis=0))).astype(int)
+    sax_levels = csc_matrix((ax_levels - 1).clip(min=0)[newaxis, :].repeat(sax_c.shape[0], axis=0))
+    sax_c = (sax_c - sax_levels > 0).astype(int)
+
     # Get forward signal
     sax_cm = vstack([sax_c, sax_cm[:sax_cm.shape[0] - sax_c.shape[0], :]])
 
