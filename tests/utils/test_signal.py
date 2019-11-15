@@ -3,7 +3,7 @@ from scipy.sparse import csc_matrix
 import numpy as np
 
 # Local import
-from core.imputer import DoubleArrayImputer
+from core.imputer.array import DoubleArrayImputer
 from utils.nmp import NumpyDriver
 
 

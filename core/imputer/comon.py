@@ -49,10 +49,9 @@ class Imputer(object):
             pickle.dump(self, handle)
 
     @staticmethod
-    def load(project):
-        pth = settings.deyep_imputer_path.format(project)
+    def load_pickle(path):
 
-        with open(base_driver.join(pth, 'imputer.pickle'), 'rb') as handle:
+        with open(path, 'rb') as handle:
             imputer = pickle.load(handle)
 
         return imputer

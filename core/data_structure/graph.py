@@ -99,15 +99,22 @@ class FiringGraph(object):
         self.forward_firing['o'] += sax_o.sum(axis=0)
 
     def update_mask(self, t):
-        self.matrices['Im'] = self.matrices['Im'].multiply(self.backward_firing['i'] < t).multiply(self.I)
-        self.matrices['Cm'] = self.matrices['Cm'].multiply(self.backward_firing['c'] < t).multiply(self.C)
-        self.matrices['Om'] = self.matrices['Om'].multiply(self.backward_firing['o'] < t).multiply(self.O)
+
+        self.matrices['Im'] = self.clip_firing(self.matrices['Im'].multiply(self.I), self.backward_firing['i'], t)
+        self.matrices['Cm'] = self.clip_firing(self.matrices['Cm'].multiply(self.C), self.backward_firing['c'], t)
+        self.matrices['Om'] = self.clip_firing(self.matrices['Om'].multiply(self.O), self.backward_firing['o'], t)
 
     @staticmethod
-    def load(project, graph_id):
-        pth = driver.join(settings.deyep_graph_path.format(project), '{}.pckl'.format(graph_id))
+    def clip_firing(sax_mask, sax_bf, t):
+        for i, j in zip(*sax_mask.multiply(sax_bf).nonzero()):
+            if sax_bf[i, j] >= t:
+                sax_mask[i, j] = False
+        return sax_mask
 
-        with open(pth, 'rb') as handle:
+    @staticmethod
+    def load_pickle(path, project, graph_id=None):
+
+        with open(path, 'rb') as handle:
             d_graph = pickle.load(handle)
 
         return FiringGraph.from_dict(d_graph, project, graph_id=graph_id)
@@ -158,7 +165,7 @@ class FiringGraph(object):
 
         # Get dainer mask matrices
         d_mask = utils.mat_mask_from_vertice_mask(sax_I, sax_C, sax_O, mask_vertice_drain)
-        d_matrices = dict(d_mask.items() + [('Iw', sax_I), ('Cw', sax_C), ('Ow', sax_O)])
+        d_matrices = dict(list(d_mask.items()) + [('Iw', sax_I), ('Cw', sax_C), ('Ow', sax_O)])
 
         return FiringGraph(project, ax_levels, depth=depth, matrices=d_matrices, graph_id=graph_id)
 
@@ -178,7 +185,7 @@ class FiringGraph(object):
 
         return fg
 
-    def save(self, path):
+    def save_as_pickle(self, path):
         d_graph = self.to_dict()
 
         with open(path, 'wb') as handle:

@@ -91,7 +91,9 @@ def fpc(sax_c, sax_cm, ax_levels):
     :rtype: scipy.sparse.spmatrix
     """
     # Compare forward strength to level for activation
-    sax_c = (sax_c >= csc_matrix(ax_levels[newaxis, :].repeat(sax_c.shape[0], axis=0))).astype(int)
+    sax_levels = csc_matrix((ax_levels - 1).clip(min=0)[newaxis, :].repeat(sax_c.shape[0], axis=0))
+    sax_c = (sax_c - sax_levels > 0).astype(int)
+
     # Get forward signal
     sax_cm = vstack([sax_c, sax_cm[:sax_cm.shape[0] - sax_c.shape[0], :]])
 
