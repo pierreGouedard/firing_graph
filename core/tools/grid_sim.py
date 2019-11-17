@@ -3,11 +3,11 @@ from scipy.sparse import csc_matrix
 import numpy as np
 
 # Local import
-from core.tools.imputers.array import DoubleArrayImputer
-from core.tools.drivers.nmp import NumpyDriver
+from .imputers.array import DoubleArrayImputer
+from .drivers.nmp import NumpyDriver
 
 
-class TestSignal(object):
+class GridSim(object):
     driver = NumpyDriver()
 
     def __init__(self, name):
@@ -69,7 +69,7 @@ class TestSignal(object):
         return imputer
 
 
-class SignalPlusNoise(TestSignal):
+class SignalPlusNoiseGrid(GridSim):
 
     def __init__(self, n_sim, n_bits, p_target, n_targets, p_noise):
 
@@ -83,7 +83,7 @@ class SignalPlusNoise(TestSignal):
         # Set base values of p and q, used in score process
         self.p, self.q = 1, 1
 
-        TestSignal.__init__(self, 'SignalPlusNoise')
+        GridSim.__init__(self, 'SignalPlusNoiseGrid')
 
     def phi(self, omega):
         return self.p_target / (self.p_target + (1 - self.p_target) * omega)
@@ -154,7 +154,7 @@ class SignalPlusNoise(TestSignal):
         return ax_inputs, ax_outputs
 
 
-class SparseActivation(TestSignal):
+class SparseActivationGrid(GridSim):
 
     def __init__(self, p_targets, p_bits, n_targets, n_bits, purity_rank=2, delta=0):
 
@@ -169,7 +169,7 @@ class SparseActivation(TestSignal):
         # Init mapping targets to bits
         self.map_targets_bits = {'target_{}'.format(j): [] for j in range(self.n_targets)}
 
-        TestSignal.__init__(self, 'SparseActivation')
+        GridSim.__init__(self, 'SparseActivationGrid')
 
     def phi(self, omega):
         return self.p_targets / (self.p_targets + (1 - self.p_targets) * omega)
