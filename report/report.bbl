@@ -1,0 +1,39 @@
+\begin{thebibliography}{1}
+
+\bibitem{PCML-1}
+Christopher~M Bishop.
+\newblock {\em {Pattern recognition and machine learning}}.
+\newblock Information science and statistics. Springer, New York, NY, 2006.
+\newblock Softcover published in 2016.
+
+\bibitem{PCML-2}
+Yann LeCun, Yoshua Bengio, and Geoffrey Hinton.
+\newblock Deep learning.
+\newblock {\em Nature}, 521(7553):436--444, 5 2015.
+
+\bibitem{PCML-3}
+L.~Breiman, J.~H. Friedman, R.~A. Olshen, and C.~J. Stone.
+\newblock {\em Classification and Regression Trees}.
+\newblock Wadsworth and Brooks, Monterey, CA, 1984.
+
+\bibitem{PCML-4}
+Andy Liaw and Matthew Wiener.
+\newblock {Classification and Regression by randomForest}.
+\newblock {\em R News}, 2(3):18--22, 2002.
+
+\bibitem{PCML-5}
+Ji~Zhu, Hui Zou, Saharon Rosset, and Trevor Hastie.
+\newblock Multi-class adaboost, 2009.
+
+\bibitem{SP-1}
+Martin Vetterli, Jelena Kovačević, and Vivek~K Goyal.
+\newblock {\em Foundations of Signal Processing}.
+\newblock Cambridge University Press, 2014.
+
+\bibitem{TAO-1}
+T.~Tao.
+\newblock {\em Topics in Random Matrix Theory, ser. Graduate Studies in
+  Mathematics}.
+\newblock Providence, Rhode Island: American Mathematical Society, 2012.
+
+\end{thebibliography}
