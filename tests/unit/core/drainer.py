@@ -4,7 +4,7 @@ from scipy.sparse import csc_matrix
 
 # Local import
 from core.data_structure.utils import gather_matrices
-from core.imputer.array import DoubleArrayImputer
+from core.tools.imputers.array import DoubleArrayImputer
 from utils.nmp import NumpyDriver
 from core.solver.drainer import FiringGraphDrainer
 from tests.utils.interactive_plots import plot_graph
@@ -239,7 +239,7 @@ def create_imputer(name, sax_in, sax_out, return_dirs=False):
     driver.write_file(sax_in, driver.join(tmpdiri.path, 'forward.npz'), is_sparse=True)
     driver.write_file(sax_out, driver.join(tmpdiri.path, 'backward.npz'), is_sparse=True)
 
-    # Create and init imputer
+    # Create and init imputers
     imputer = DoubleArrayImputer('test', tmpdiri.path, tmpdiro.path)
     imputer.read_raw_data('forward.npz', 'backward.npz')
     imputer.run_preprocessing()

@@ -3,7 +3,7 @@ import unittest
 import numpy as np
 from scipy.sparse import csc_matrix
 
-from core.imputer.array import DoubleArrayImputer
+from core.tools.imputers.array import DoubleArrayImputer
 from core.solver.sampler import Sampler
 
 from utils.nmp import NumpyDriver
@@ -33,7 +33,7 @@ class TestSampler(unittest.TestCase):
         python -m unittest tests.unit.core.sampler.TestSampler.sampler_init
 
         """
-        # Create simple imputer and sampler
+        # Create simple imputers and sampler
         imputer = init_imputer(self.input, self.output)
         sampler = Sampler((self.ni, self.no), self.N, imputer)
 
@@ -61,7 +61,7 @@ class TestSampler(unittest.TestCase):
         python -m unittest tests.unit.core.sampler.TestSampler.sampler_main
 
         """
-        # Create simple imputer and sampler
+        # Create simple imputers and sampler
         imputer = init_imputer(self.input, self.output)
         sampler = Sampler(
             (self.ni, self.no), self.N, imputer, selected_bits=self.selected_bits, preselected_bits=self.pselected_bits
@@ -103,7 +103,7 @@ def init_imputer(ax_input, ax_output):
     driver.write_file(ax_input, driver.join(tmpdirin.path, 'forward.npz'), is_sparse=True)
     driver.write_file(ax_output, driver.join(tmpdirin.path, 'backward.npz'), is_sparse=True)
 
-    # Create and init imputer
+    # Create and init imputers
     imputer = DoubleArrayImputer('test', tmpdirin.path, tmpdirout.path)
     imputer.read_raw_data('forward.npz', 'backward.npz')
     imputer.run_preprocessing()

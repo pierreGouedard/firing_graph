@@ -19,7 +19,7 @@ class Sampler(object):
         :param size: list [#input, #output]
         :param w: int weights of edges of firing graph
         :param p_sample: float probability of sampling
-        :param imputer: deyep.core.imputer.comon.Imputer
+        :param imputer: deyep.core.imputers.comon.Imputer
         :param selected_bits: dict of set of inputs index already sampled in previous iteration (key = output index)
         :param preselected_bits: dict of set of inputs index from which we want to draw next sample (key = output index)
         :param supervised: bool

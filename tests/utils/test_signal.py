@@ -3,7 +3,7 @@ from scipy.sparse import csc_matrix
 import numpy as np
 
 # Local import
-from core.imputer.array import DoubleArrayImputer
+from core.tools.imputers.array import DoubleArrayImputer
 from utils.nmp import NumpyDriver
 
 
@@ -54,7 +54,7 @@ class TestSignal(object):
         self.driver.write_file(sax_in, self.driver.join(tmpdiri.path, 'forward.npz'), is_sparse=True)
         self.driver.write_file(sax_out, self.driver.join(tmpdiri.path, 'backward.npz'), is_sparse=True)
 
-        # Create and init imputer
+        # Create and init imputers
         imputer = DoubleArrayImputer('test', tmpdiri.path, tmpdiro.path)
         imputer.read_raw_data('forward.npz', 'backward.npz')
         imputer.run_preprocessing()

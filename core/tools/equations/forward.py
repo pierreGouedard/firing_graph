@@ -10,7 +10,7 @@ def fti(imputer, firing_graph, batch_size):
     Initialise the forward signal of input vertice with fresh input
 
     :param imputer:
-    :type imputer: deyep.core.imputer.comon.Imputer
+    :type imputer: deyep.core.imputers.comon.Imputer
     :param firing_graph:
     :type firing_graph: deyep.core.data_structure.graph.FiringGraph
     :param: batch_size: size of forward batch
@@ -106,7 +106,7 @@ def fpo(sax_o, imputer, batch_size, p, q):
 
     :param sax_o: received forward signals
     :type sax_o: scipy.sparse.spmatrix
-    :param imputer: deyep.core.imputer.comon.Imputer
+    :param imputer: deyep.core.imputers.comon.Imputer
     :type imputer: scipy.sparse.spmatrix
     :param batch_size:
     :type batch_size: int

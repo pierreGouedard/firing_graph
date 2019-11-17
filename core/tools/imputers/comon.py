@@ -3,7 +3,7 @@ import pickle
 
 # Local imports
 from utils.driver import FileDriver
-base_driver = FileDriver('imputer file driver', '')
+base_driver = FileDriver('imputers file driver', '')
 
 
 class Imputer(object):
