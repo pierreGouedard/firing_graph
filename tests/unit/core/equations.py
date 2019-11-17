@@ -5,7 +5,7 @@ from scipy.sparse import csc_matrix
 
 from core.data_structure.utils import mat_from_tuples
 from core.data_structure.graph import FiringGraph
-from core.imputer.array import DoubleArrayImputer
+from core.tools.imputers.array import DoubleArrayImputer
 from core.solver.drainer import FiringGraphDrainer
 from utils.nmp import NumpyDriver
 
@@ -87,7 +87,7 @@ class TestEquations(unittest.TestCase):
 
         """
 
-        # Create imputer and drainer
+        # Create imputers and drainer
         imputer = init_imputer(self.input, self.output)
         drainer = FiringGraphDrainer(100, self.p, self.q, self.batch_size, self.fga, imputer)
 
@@ -105,7 +105,7 @@ class TestEquations(unittest.TestCase):
         python -m unittest tests.unit.core.equations.TestEquations.backward
 
         """
-        # Create imputer and drainer
+        # Create imputers and drainer
         imputer = init_imputer(self.input, self.output)
         drainer = FiringGraphDrainer(100, self.p, self.q, self.batch_size, self.fga, imputer)
 
@@ -160,7 +160,7 @@ class TestEquations(unittest.TestCase):
         python -m unittest tests.unit.core.equations.TestEquations.drain_mask
 
         """
-        # Create imputer and drainer
+        # Create imputers and drainer
         imputer = init_imputer(self.input, self.output)
         drainer = FiringGraphDrainer(100, self.p, self.q, self.batch_size, self.fgb, imputer)
 
@@ -177,7 +177,7 @@ class TestEquations(unittest.TestCase):
         self.assertTrue((drainer.firing_graph.backward_firing['i'].toarray() == ax_I_track).all())
         self.assertTrue((drainer.firing_graph.Ow.toarray() == self.fga.Ow.toarray()).all())
 
-        # Create imputer and drainer
+        # Create imputers and drainer
         imputer = init_imputer(self.input, self.output)
         drainer = FiringGraphDrainer(100, self.p, self.q, self.batch_size, self.fgc, imputer)
 
@@ -205,7 +205,7 @@ def init_imputer(ax_input, ax_output):
     driver.write_file(ax_input, driver.join(tmpdirin.path, 'forward.npz'), is_sparse=True)
     driver.write_file(ax_output, driver.join(tmpdirin.path, 'backward.npz'), is_sparse=True)
 
-    # Create and init imputer
+    # Create and init imputers
     imputer = DoubleArrayImputer('test', tmpdirin.path, tmpdirout.path)
     imputer.read_raw_data('forward.npz', 'backward.npz')
     imputer.run_preprocessing()
