@@ -4,7 +4,7 @@ import numpy as np
 
 # Local import
 from core.tools.imputers.array import DoubleArrayImputer
-from utils.nmp import NumpyDriver
+from core.tools.drivers.nmp import NumpyDriver
 
 
 class TestSignal(object):

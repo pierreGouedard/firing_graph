@@ -6,7 +6,7 @@ from scipy.sparse import csc_matrix
 from core.tools.imputers.array import DoubleArrayImputer
 from core.solver.sampler import Sampler
 
-from utils.nmp import NumpyDriver
+from core.tools.drivers.nmp import NumpyDriver
 
 __maintainer__ = 'Pierre Gouedard'
 

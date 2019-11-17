@@ -1,8 +1,8 @@
 # global import
-from utils.nmp import NumpyDriver
 
 # Local import
-from core.tools.imputers.comon import ImputerDoubleSource
+from ..drivers.nmp import NumpyDriver
+from .comon import ImputerDoubleSource
 
 
 class DoubleArrayImputer(ImputerDoubleSource):

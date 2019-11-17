@@ -3,7 +3,7 @@ import numpy as np
 from scipy.sparse import save_npz, load_npz, vstack, hstack, coo_matrix
 
 # Local import
-from utils.driver import FileDriver
+from .driver import FileDriver
 
 
 # Should inherit from FileDriver, that inherit from Driver

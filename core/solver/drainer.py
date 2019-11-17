@@ -3,9 +3,9 @@ from scipy.sparse import csc_matrix, csr_matrix
 import numpy as np
 
 # Local import
-from core.tools.equations.backward import bpo, bpc, btc
-from core.tools.equations.forward import fti, ftc, fto, fpi, fpc, fpo
-from core.tools.equations.structure import buc, buo, bui
+from ..tools.equations.backward import bpo, bpc, btc
+from ..tools.equations.forward import fti, ftc, fto, fpi, fpc, fpo
+from ..tools.equations.structure import buc, buo, bui
 
 
 class FiringGraphDrainer(object):

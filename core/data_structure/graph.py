@@ -6,8 +6,8 @@ from scipy.sparse import lil_matrix
 import copy
 
 # Local import
-from core.data_structure import utils
-from utils.driver import FileDriver
+from ..data_structure import utils
+from ..tools.drivers.driver import FileDriver
 
 driver = FileDriver('graph_file_driver', '')
 
