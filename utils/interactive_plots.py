@@ -52,11 +52,13 @@ def multi_line_plot_colored(d_series, title='line_plot', ylab='y', xlab='x', cma
     for color, l_series in d_series.items():
         for s_series in l_series:
             plt.plot(s_series, '-', linewidth=2, c=cmap.get(color, color))
-
+    import IPython
+    IPython.embed()
     plt.ylabel(ylab, fontdict={'size': 45, 'usetex': True}, **{'usetex': True})
     plt.xlabel(xlab,  fontdict={'size': 45, 'usetex': True}, **{'usetex': True})
     plt.title(title, fontdict={'size': 21, 'usetex': True}, **{'usetex': True})
     plt.tick_params(labelsize=30, pad=6)
-    import IPython
-    IPython.embed()
+
+
+
     plt.show()
