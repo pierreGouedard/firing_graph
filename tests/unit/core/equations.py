@@ -7,7 +7,7 @@ from core.data_structure.utils import mat_from_tuples
 from core.data_structure.graph import FiringGraph
 from core.tools.imputers.array import DoubleArrayImputer
 from core.solver.drainer import FiringGraphDrainer
-from utils.nmp import NumpyDriver
+from core.tools.drivers.nmp import NumpyDriver
 
 __maintainer__ = 'Pierre Gouedard'
 

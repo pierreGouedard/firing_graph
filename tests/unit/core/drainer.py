@@ -5,9 +5,9 @@ from scipy.sparse import csc_matrix
 # Local import
 from core.data_structure.utils import gather_matrices
 from core.tools.imputers.array import DoubleArrayImputer
-from utils.nmp import NumpyDriver
+from core.tools.drivers.nmp import NumpyDriver
 from core.solver.drainer import FiringGraphDrainer
-from tests.utils.interactive_plots import plot_graph
+from utils.interactive_plots import plot_graph
 from tests.utils.test_pattern import AndPattern2 as ap2, AndPattern3 as ap3
 
 __maintainer__ = 'Pierre Gouedard'

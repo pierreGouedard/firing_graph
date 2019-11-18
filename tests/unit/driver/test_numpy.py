@@ -4,7 +4,7 @@ from scipy.sparse import csc_matrix
 import numpy as np
 
 # Local import
-from utils.nmp import NumpyDriver
+from core.tools.drivers.nmp import NumpyDriver
 
 __maintainer__ = 'Pierre Gouedard'
 
