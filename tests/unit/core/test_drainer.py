@@ -8,7 +8,7 @@ from core.tools.imputers.array import DoubleArrayImputer
 from core.tools.drivers.nmp import NumpyDriver
 from core.solver.drainer import FiringGraphDrainer
 from utils.interactive_plots import plot_graph
-from tests.utils.test_pattern import AndPattern2 as ap2, AndPattern3 as ap3
+from utils.patterns import AndPattern2 as ap2, AndPattern3 as ap3
 
 __maintainer__ = 'Pierre Gouedard'
 
@@ -33,7 +33,7 @@ class TestDrainer(unittest.TestCase):
 
         """
         Test the well functioning of mask on backward updates
-        python -m unittest tests.unit.core.drainer.TestDrainer.time_mask
+        python -m unittest tests.unit.core.test_drainer.TestDrainer.time_mask
 
         """
 
