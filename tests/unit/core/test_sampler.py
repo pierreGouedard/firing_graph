@@ -26,11 +26,11 @@ class TestSampler(unittest.TestCase):
         self.input = csc_matrix(np.random.binomial(1, 0.1, (100, self.ni)), dtype=int)
         self.output = csc_matrix(np.random.binomial(1, 0.1, (100, self.no)), dtype=int)
 
-    def sampler_init(self):
+    def test_sampler_init(self):
         """
         sampler test for first usage (initialisation)
 
-        python -m unittest tests.unit.core.sampler.TestSampler.sampler_init
+        python -m unittest tests.unit.core.test_sampler.TestSampler.test_sampler_init
 
         """
         # Create simple imputers and sampler
@@ -54,11 +54,11 @@ class TestSampler(unittest.TestCase):
         self.assertEqual(sampler.firing_graph.I.shape[0], self.ni)
         self.assertEqual(sampler.firing_graph.O.shape[1], self.no)
 
-    def sampler_main(self):
+    def test_sampler_main(self):
         """
         sampler test for main usage of sampler (after initialisation)
 
-        python -m unittest tests.unit.core.sampler.TestSampler.sampler_main
+        python -m unittest tests.unit.core.test_sampler.TestSampler.test_sampler_main
 
         """
         # Create simple imputers and sampler

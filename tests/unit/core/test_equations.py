@@ -80,10 +80,10 @@ class TestEquations(unittest.TestCase):
         self.input = csc_matrix([[0, 0], [1, 0], [0, 1], [1, 1]])
         self.output = csc_matrix([[0, 0], [0, 0], [0, 1], [1, 1]])
 
-    def forward(self):
+    def test_forward(self):
         """
         Very precise case on very simple graph to validate basics of drainer for forward equations
-        python -m unittest tests.unit.core.equations.TestEquations.forward
+        python -m unittest tests.unit.core.test_equations.TestEquations.test_forward
 
         """
 
@@ -99,10 +99,10 @@ class TestEquations(unittest.TestCase):
         drainer.run_iteration(True, False)
         self.assertTrue((drainer.sax_o.toarray() == np.array([[0, 0], [1, 0], [0, 1], [2, 1]])).all())
 
-    def backward(self):
+    def test_backward(self):
         """
         Very precise case on very simple graph to validate basics of drainer for backward equations
-        python -m unittest tests.unit.core.equations.TestEquations.backward
+        python -m unittest tests.unit.test_core.equations.TestEquations.test_backward
 
         """
         # Create imputers and drainer
@@ -154,10 +154,10 @@ class TestEquations(unittest.TestCase):
         self.assertTrue((drainer.firing_graph.Iw.toarray() == ax_I_expected).all())
         self.assertTrue((drainer.firing_graph.backward_firing['i'].toarray() == ax_I_track).all())
 
-    def drain_mask(self):
+    def test_drain_mask(self):
         """
         Very precise case on very simple graph to validate effectiveness of mask for draining
-        python -m unittest tests.unit.core.equations.TestEquations.drain_mask
+        python -m unittest tests.unit.core.test_equations.TestEquations.test_drain_mask
 
         """
         # Create imputers and drainer
