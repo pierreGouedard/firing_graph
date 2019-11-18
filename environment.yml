@@ -4,6 +4,7 @@ dependencies:
   - python==3.7
   - pytest==5.2.2
   - ipython
+  - texlive-core
   - pip:
     - pandas==0.25.2
     - numpy==1.17.4
