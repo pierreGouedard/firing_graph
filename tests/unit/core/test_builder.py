@@ -25,10 +25,10 @@ class TestBuilder(unittest.TestCase):
         # Get matrices for building test
         self.sax_I, self.sax_C, self.sax_O = mat_from_tuples(self.ni, self.no, self.nc, self.l_edges, self.weight)
 
-    def building_graph(self):
+    def test_building_graph(self):
         """
         Test basic graph building
-        python -m unittest tests.unit.core.builder.TestBuilder.building_graph
+        python -m unittest tests.unit.core.test_builder.TestBuilder.test_building_graph
 
         """
 

@@ -29,11 +29,11 @@ class TestDrainer(unittest.TestCase):
         self.ap3 = ap3(self.ni, self.no, n_selected=self.n_selected, w=self.w0, seed=1234)
         self.ap3_fg = self.ap3.build_graph_pattern_init()
 
-    def time_mask(self):
+    def test_time_mask(self):
 
         """
         Test the well functioning of mask on backward updates
-        python -m unittest tests.unit.core.test_drainer.TestDrainer.time_mask
+        python -m unittest tests.unit.core.test_drainer.TestDrainer.test_time_mask
 
         """
 
@@ -53,11 +53,11 @@ class TestDrainer(unittest.TestCase):
         self.assertTrue((I[I >= self.w0] == I_final[I_final > 0] + self.t_mask).all())
         self.assertTrue((I[(0 < I) & (I <= self.w0)] == I_init[~(I_final > 0) & (I_init > 0)] - self.t_mask).all())
 
-    def andpattern2(self):
+    def test_andpattern2(self):
 
         """
         Test And Pattern of depth 2
-        python -m unittest tests.unit.core.drainer.TestDrainer.andpattern2
+        python -m unittest tests.unit.core.test_drainer.TestDrainer.test_andpattern2
 
         """
 
@@ -97,10 +97,10 @@ class TestDrainer(unittest.TestCase):
 
             plot_graph(ax_graph_conv, self.ap2.layout(), title='Result Test')
 
-    def andpattern3(self):
+    def test_andpattern3(self):
         """
         Test And Pattern of depth 3
-        python -m unittest tests.unit.core.drainer.TestDrainer.andpattern3
+        python -m unittest tests.unit.core.test_drainer.TestDrainer.test_andpattern3
 
         """
         # Create I/O and save it into tmpdir files
@@ -151,10 +151,10 @@ class TestDrainer(unittest.TestCase):
 
             plot_graph(ax_graph_conv, self.ap3.layout(), title='Result Test')
 
-    def batch_size_2(self):
+    def test_batch_size_2(self):
         """
         Test batch size coherence (depth 2)
-        python -m unittest tests.unit.core.drainer.TestDrainer.batch_size_2
+        python -m unittest tests.unit.core.test_drainer.TestDrainer.test_batch_size_2
 
         """
         # Create I/O and save it into tmpdir files
@@ -188,10 +188,10 @@ class TestDrainer(unittest.TestCase):
         self.assertTrue(((-3 < ax_diff) & (ax_diff < 3)).all())
         tmpdiri.remove(), tmpdiro.remove()
 
-    def batch_size_3(self):
+    def test_batch_size_3(self):
         """
         Test batch size coherence (depth 3)
-        python -m unittest tests.unit.core.drainer.TestDrainer.batch_size_3
+        python -m unittest tests.unit.core.test_drainer.TestDrainer.test_batch_size_3
 
         """
         # Create I/O and save it into tmpdir files
