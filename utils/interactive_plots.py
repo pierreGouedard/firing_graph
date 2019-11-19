@@ -3,6 +3,9 @@ import matplotlib
 import matplotlib.pyplot as plt
 import networkx as nx
 
+matplotlib.rcParams['text.usetex'] = True
+matplotlib.rcParams['text.latex.unicode'] = True
+
 
 def plot_graph(ax_graph, layout=None, title=''):
     """
