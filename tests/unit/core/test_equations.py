@@ -5,9 +5,8 @@ from scipy.sparse import csc_matrix
 
 from core.data_structure.utils import mat_from_tuples
 from core.data_structure.graph import FiringGraph
-from core.tools.imputers.array import DoubleArrayImputer
+from core.tools.imputers import ArrayImputer
 from core.solver.drainer import FiringGraphDrainer
-from core.tools.drivers.nmp import NumpyDriver
 
 __maintainer__ = 'Pierre Gouedard'
 
@@ -22,7 +21,7 @@ class TestEquations(unittest.TestCase):
            c0    c1      c2
             \    /        |
              \  /         |
-              o0          o2
+              o0          o1
 
         Levels:
          c0 = 1, c1 = 2, c2 = 1
@@ -31,7 +30,7 @@ class TestEquations(unittest.TestCase):
         | i0 | i1 | -> | c0 | c1 | c2 |
         | 0  |  0 | -> | 0  |  0 | 0  |
         | 1  |  0 | -> | 1  |  0 | 0  |
-        | 0  |  1 | -> | 0  |  0 | 1  |
+        | 0  |  1 | -> | 0  |  0 | 1  sax_out|
         | 1  |  1 | -> | 1  |  1 | 1  |
 
         Table Core -> Output:
@@ -102,7 +101,7 @@ class TestEquations(unittest.TestCase):
     def test_backward(self):
         """
         Very precise case on very simple graph to validate basics of drainer for backward equations
-        python -m unittest tests.unit.test_core.equations.TestEquations.test_backward
+        python -m unittest tests.unit.core.test_equations.TestEquations.test_backward
 
         """
         # Create imputers and drainer
@@ -195,24 +194,10 @@ class TestEquations(unittest.TestCase):
         self.assertTrue((drainer.firing_graph.Iw.toarray() == self.fga.Iw.toarray()).all())
 
 
-def init_imputer(ax_input, ax_output):
-    # Create temporary directory for test
-    driver = NumpyDriver()
-    tmpdirin, tmpdirout = driver.TempDir('test_equation', suffix='in', create=True), \
-                          driver.TempDir('test_equation', suffix='out', create=True)
-
-    # Create I/O and save it into tmpdir files
-    driver.write_file(ax_input, driver.join(tmpdirin.path, 'forward.npz'), is_sparse=True)
-    driver.write_file(ax_output, driver.join(tmpdirin.path, 'backward.npz'), is_sparse=True)
+def init_imputer(sax_input, sax_output):
 
     # Create and init imputers
-    imputer = DoubleArrayImputer('test', tmpdirin.path, tmpdirout.path)
-    imputer.read_raw_data('forward.npz', 'backward.npz')
-    imputer.run_preprocessing()
-    imputer.write_features('forward.npz', 'backward.npz')
+    imputer = ArrayImputer(sax_input, sax_output)
     imputer.stream_features()
-
-    tmpdirin.remove()
-    tmpdirout.remove()
 
     return imputer

@@ -7,9 +7,6 @@ import copy
 
 # Local import
 from ..data_structure import utils
-from ..tools.drivers.driver import FileDriver
-
-driver = FileDriver('graph_file_driver', '')
 
 
 class FiringGraph(object):

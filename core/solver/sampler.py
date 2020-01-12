@@ -72,8 +72,8 @@ class Sampler(object):
 
         # Select bits for each output
         while ax_selected.sum() != len(ax_selected):
-            sax_si = self.imputer.stream_next_forward()
-            sax_got = self.imputer.stream_next_backward()
+            sax_si = self.imputer.next_forward()
+            sax_got = self.imputer.next_backward()
 
             for i in sax_got.nonzero()[1]:
                 if not ax_selected[i]:

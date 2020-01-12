@@ -138,7 +138,7 @@ class Driver(object):
 
 class FileDriver(Driver):
 
-    def __init__(self, name, desc, streamable=False):
+    def __init__(self, name, desc):
         Driver.__init__(self, name, desc)
 
     def TempFile(self, prefix='tmp', suffix='', dir=None, destination=None, create=False):

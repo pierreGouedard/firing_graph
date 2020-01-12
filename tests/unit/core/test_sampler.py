@@ -3,10 +3,8 @@ import unittest
 import numpy as np
 from scipy.sparse import csc_matrix
 
-from core.tools.imputers.array import DoubleArrayImputer
+from core.tools.imputers import ArrayImputer
 from core.solver.sampler import Sampler
-
-from core.tools.drivers.nmp import NumpyDriver
 
 __maintainer__ = 'Pierre Gouedard'
 
@@ -93,24 +91,10 @@ class TestSampler(unittest.TestCase):
             )
 
 
-def init_imputer(ax_input, ax_output):
-    # Create temporary directory for test
-    driver = NumpyDriver()
-    tmpdirin, tmpdirout = driver.TempDir('test_sampler', suffix='in', create=True), \
-                          driver.TempDir('test_sampler', suffix='out', create=True)
-
-    # Create I/O and save it into tmpdir files
-    driver.write_file(ax_input, driver.join(tmpdirin.path, 'forward.npz'), is_sparse=True)
-    driver.write_file(ax_output, driver.join(tmpdirin.path, 'backward.npz'), is_sparse=True)
+def init_imputer(sax_input, sax_output):
 
     # Create and init imputers
-    imputer = DoubleArrayImputer('test', tmpdirin.path, tmpdirout.path)
-    imputer.read_raw_data('forward.npz', 'backward.npz')
-    imputer.run_preprocessing()
-    imputer.write_features('forward.npz', 'backward.npz')
+    imputer = ArrayImputer(sax_input, sax_output)
     imputer.stream_features()
-
-    tmpdirin.remove()
-    tmpdirout.remove()
 
     return imputer
