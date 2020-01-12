@@ -7,11 +7,11 @@ from .driver import FileDriver
 
 
 # Should inherit from FileDriver, that inherit from Driver
-class NumpyDriver(FileDriver):
+class ArrayStream(object):
 
     def __init__(self,):
         self.d_stream = None
-        FileDriver.__init__(self, 'numpy driver', 'Driver use to read / write any numpy arrays', streamable=True)
+        self.driver = FileDriver()
 
     def read_file(self, url, **kwargs):
         if kwargs.get('is_sparse', False):
@@ -24,14 +24,14 @@ class NumpyDriver(FileDriver):
     def read_partitioned_file(self, url, is_sparse=False, l_files=None):
 
         if l_files is None:
-            l_files = self.listdir(url)
+            l_files = self.driver.listdir(url)
 
         d_out = {}
         for filename in l_files:
             if is_sparse:
-                d_out[filename.split('.')[0]] = self.read_file(self.join(url, filename), **{'is_sparse': True})
+                d_out[filename.split('.')[0]] = self.read_file(self.driver.join(url, filename), **{'is_sparse': True})
             else:
-                d_out[filename.split('.')[0]] = self.read_file(self.join(url, filename))
+                d_out[filename.split('.')[0]] = self.read_file(self.driver.join(url, filename))
 
         return d_out
 
@@ -48,19 +48,19 @@ class NumpyDriver(FileDriver):
 
         for k, v in d_ax.items():
             if is_sparse:
-                self.write_file(v, self.join(url, '{}.{}'.format(k, 'npz')), **{'is_sparse': True})
+                self.write_file(v, self.driver.join(url, '{}.{}'.format(k, 'npz')), **{'is_sparse': True})
             else:
-                self.write_file(v, self.join(url, '{}.{}'.format(k, 'npy')))
+                self.write_file(v, self.driver.join(url, '{}.{}'.format(k, 'npy')))
 
-    def init_stream(self, url, is_sparse=False, is_cyclic=False, orient=None):
+    def create_stream(self, url, is_sparse=False, is_cyclic=False, orient=None):
         # Initialize file and element cursor
         self.d_stream = {'orient': orient, 'is_sparse': is_sparse, 'url': url, 'is_cyclic': is_cyclic, 'step': 0,
                          'cache': self.read_file(url, is_sparse=is_sparse)}
 
         return self
 
-    def init_stream_partition(self, url, key_partition=lambda x: x, n_cache=2, orient=None, is_sparse=False,
-                              is_cyclic=False):
+    def create_stream_partition(self, url, key_partition=lambda x: x, n_cache=2, orient=None, is_sparse=False,
+                                is_cyclic=False):
         """
 
         :param url:
@@ -68,13 +68,14 @@ class NumpyDriver(FileDriver):
         :param n_cache:
         :param orient:
         :param is_sparse:
+
         :param is_cyclic:
         :return:
         """
 
         # Initialize file and element cursor
         d_stream = {'orient': orient, 'n_cache': n_cache, 'is_sparse': is_sparse, 'key': key_partition,
-                    'url': url, 'is_cyclic': is_cyclic, 'step': 0, 'offset': 0, 'partitions': self.listdir(url)}
+                    'url': url, 'is_cyclic': is_cyclic, 'step': 0, 'offset': 0, 'partitions': self.driver.listdir(url)}
 
         # Sort list of partitions
         d_stream['partitions'] = sorted(d_stream['partitions'], key=key_partition)
@@ -83,7 +84,7 @@ class NumpyDriver(FileDriver):
         self.d_stream = self.load_cache_stream(d_stream)
 
         # Support at most matrices stream
-        assert self.d_stream['cache'].ndim < 3, 'streaming of numpy array only available for dimension les than 3'
+        assert self.d_stream['cache'].ndim < 3, 'streaming of numpy array only available for dimension less than 3'
 
         return self
 

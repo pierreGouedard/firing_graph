@@ -3,12 +3,12 @@ from scipy.sparse import csc_matrix
 import numpy as np
 
 # Local import
-from ..core.tools.imputers.array import DoubleArrayImputer
-from ..core.tools.drivers.nmp import NumpyDriver
+from ..core.tools.imputers import ArrayImputer
+from ..core.tools.drivers import FileDriver
 
 
 class GridSim(object):
-    driver = NumpyDriver()
+    driver = FileDriver('grid_sim_driver', 'File driver for simulation')
 
     def __init__(self, name):
         self.name = name
@@ -32,39 +32,15 @@ class GridSim(object):
     def generate_io_sequence(self, n, mask_target=None):
         raise NotImplementedError
 
-    def stream_io_sequence(self, n, mask_target=None, return_dirs=True):
+    def stream_io_sequence(self, n, mask_target=None):
         sax_in, sax_out = self.generate_io_sequence(n, mask_target=mask_target)
+        return self.create_imputer(sax_in, sax_out)
 
-        if return_dirs:
-            self.imputer, tmpdiri, tmpdiro = self.create_imputer(sax_in, sax_out, return_dirs=return_dirs)
-            return self.imputer, tmpdiri, tmpdiro
-
-        else:
-            self.imputer = self.create_imputer(sax_in, sax_out)
-
-        return self.imputer
-
-    def create_imputer(self, sax_in, sax_out, return_dirs=False):
-
-        dirname = 'tmp_{}_'.format(self.name)
-        tmpdiri = self.driver.TempDir(dirname, suffix='in', create=True)
-        tmpdiro = self.driver.TempDir(dirname, suffix='out', create=True)
-
-        # Create I/O and save it into tmpdir files
-        self.driver.write_file(sax_in, self.driver.join(tmpdiri.path, 'forward.npz'), is_sparse=True)
-        self.driver.write_file(sax_out, self.driver.join(tmpdiri.path, 'backward.npz'), is_sparse=True)
+    def create_imputer(self, sax_in, sax_out):
 
         # Create and init imputers
-        imputer = DoubleArrayImputer('test', tmpdiri.path, tmpdiro.path)
-        imputer.read_raw_data('forward.npz', 'backward.npz')
-        imputer.run_preprocessing()
-        imputer.write_features('forward.npz', 'backward.npz')
+        imputer = ArrayImputer(sax_in, sax_out)
         imputer.stream_features()
-
-        if return_dirs:
-            return imputer, tmpdiri, tmpdiro
-
-        tmpdiri.remove(), tmpdiro.remove()
 
         return imputer
 

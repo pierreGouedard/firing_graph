@@ -4,8 +4,7 @@ from scipy.sparse import csc_matrix
 
 # Local import
 from core.data_structure.utils import gather_matrices
-from core.tools.imputers.array import DoubleArrayImputer
-from core.tools.drivers.nmp import NumpyDriver
+from core.tools.imputers import ArrayImputer
 from core.solver.drainer import FiringGraphDrainer
 from utils.interactive_plots import plot_graph
 from utils.patterns import AndPattern2 as ap2, AndPattern3 as ap3
@@ -39,7 +38,7 @@ class TestDrainer(unittest.TestCase):
 
         # Create I/O and save it into tmpdir files
         ax_input, ax_output = self.ap2.generate_io_sequence(1000, seed=1234)
-        imputer = create_imputer('andpattern2', csc_matrix(ax_input), csc_matrix(ax_output))
+        imputer = create_imputer(csc_matrix(ax_input), csc_matrix(ax_output))
 
         # Create drainer
         drainer = FiringGraphDrainer(self.t_mask, 1, 1, 1, self.ap2_fg, imputer, verbose=1)
@@ -63,7 +62,7 @@ class TestDrainer(unittest.TestCase):
 
         # Create I/O and save it into tmpdir files
         ax_input, ax_output = self.ap2.generate_io_sequence(1000, seed=1234)
-        imputer = create_imputer('andpattern2', csc_matrix(ax_input), csc_matrix(ax_output))
+        imputer = create_imputer(csc_matrix(ax_input), csc_matrix(ax_output))
 
         # Create drainer
         drainer = FiringGraphDrainer(1000, 1, 1, 10, self.ap2_fg, imputer, verbose=1)
@@ -105,7 +104,7 @@ class TestDrainer(unittest.TestCase):
         """
         # Create I/O and save it into tmpdir files
         ax_input, ax_output = self.ap3.generate_io_sequence(1000, seed=1234)
-        imputer = create_imputer('andpattern3', csc_matrix(ax_input), csc_matrix(ax_output))
+        imputer = create_imputer(csc_matrix(ax_input), csc_matrix(ax_output))
 
         # Create drainer
         drainer = FiringGraphDrainer(1000, 1, 1, 1, self.ap3_fg, imputer, verbose=1)
@@ -159,9 +158,7 @@ class TestDrainer(unittest.TestCase):
         """
         # Create I/O and save it into tmpdir files
         ax_input, ax_output = self.ap2.generate_io_sequence(1000, seed=1234)
-        imputer, tmpdiri, tmpdiro  = create_imputer(
-            'andpattern2', csc_matrix(ax_input), csc_matrix(ax_output), return_dirs=True
-        )
+        imputer = create_imputer(csc_matrix(ax_input), csc_matrix(ax_output))
 
         # Drain with batch size of 2
         drainer_2 = FiringGraphDrainer(1000, 1, 1, 2, self.ap2_fg.copy(), imputer, verbose=1)
@@ -186,7 +183,6 @@ class TestDrainer(unittest.TestCase):
         # Compare to auto iteration, no difference in edges weight higher than the one due to inertia of auto iter*
         ax_diff = (drainer_1.firing_graph.Iw.toarray() - drainer_1m.firing_graph.Iw.toarray())
         self.assertTrue(((-3 < ax_diff) & (ax_diff < 3)).all())
-        tmpdiri.remove(), tmpdiro.remove()
 
     def test_batch_size_3(self):
         """
@@ -196,9 +192,7 @@ class TestDrainer(unittest.TestCase):
         """
         # Create I/O and save it into tmpdir files
         ax_input, ax_output = self.ap3.generate_io_sequence(1000, seed=1234)
-        imputer, tmpdiri, tmpdiro = create_imputer(
-            'andpattern3', csc_matrix(ax_input), csc_matrix(ax_output), return_dirs=True
-        )
+        imputer = create_imputer(csc_matrix(ax_input), csc_matrix(ax_output))
 
         # Drain with batch size of 2
         drainer_2 = FiringGraphDrainer(1000, 1, 1, 2, self.ap3_fg.copy(), imputer, verbose=1)
@@ -223,32 +217,17 @@ class TestDrainer(unittest.TestCase):
         # Compare to auto iteration, no difference in edges weight higher than the one due to inertia of auto iter*
         ax_diff = (drainer_1.firing_graph.Iw.toarray() - drainer_1m.firing_graph.Iw.toarray())
         self.assertTrue(((-5 < ax_diff) & (ax_diff < 5)).all())
-        tmpdiri.remove(), tmpdiro.remove()
 
 
 # *The inertia cited here refer to the fact that for automatic iteration, forward signal are sent subsequently. Thus a
 # signal can be sent even if it go through an edge that it is supposed to be removed from feedback of signal sent before
 # Using a manual iteration, we wait for the feedback of each forward signal before sending new forward signal.
 
-def create_imputer(name, sax_in, sax_out, return_dirs=False):
-
-    driver = NumpyDriver()
-    tmpdiri, tmpdiro = driver.TempDir(name, suffix='in', create=True), driver.TempDir(name, suffix='out', create=True)
-
-    # Create I/O and save it into tmpdir files
-    driver.write_file(sax_in, driver.join(tmpdiri.path, 'forward.npz'), is_sparse=True)
-    driver.write_file(sax_out, driver.join(tmpdiri.path, 'backward.npz'), is_sparse=True)
+def create_imputer(sax_in, sax_out):
 
     # Create and init imputers
-    imputer = DoubleArrayImputer('test', tmpdiri.path, tmpdiro.path)
-    imputer.read_raw_data('forward.npz', 'backward.npz')
-    imputer.run_preprocessing()
-    imputer.write_features('forward.npz', 'backward.npz')
+    imputer = ArrayImputer(sax_in, sax_out)
     imputer.stream_features()
 
-    if return_dirs:
-        return imputer, tmpdiri, tmpdiro
-
-    tmpdiri.remove(), tmpdiro.remove()
-
     return imputer
+

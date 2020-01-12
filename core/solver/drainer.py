@@ -93,6 +93,13 @@ class FiringGraphDrainer(object):
 
         return self
 
+    def flush_signals(self):
+        for _ in range(self.firing_graph.depth - 1):
+            self.run_iteration(False, True)
+
+        for _ in range(self.firing_graph.depth - 1):
+            self.run_iteration(False, False)
+
     def run_iteration(self, load_input, load_output):
         # Forward pass
         self.forward_transmiting(load_input=load_input)
@@ -104,13 +111,6 @@ class FiringGraphDrainer(object):
 
         # Increment iteration nb
         self.iter += 1
-
-    def flush_signals(self):
-        for _ in range(self.firing_graph.depth - 1):
-            self.run_iteration(False, True)
-
-        for _ in range(self.firing_graph.depth - 1):
-            self.run_iteration(False, False)
 
     def adapt_batch_size(self, max_batch_size):
 

@@ -20,7 +20,7 @@ def fti(imputer, firing_graph, batch_size):
     """
     sax_i = csr_matrix((0, firing_graph.I.shape[0]))
     for _ in range(batch_size):
-        sax_i = vstack([sax_i, imputer.stream_next_forward().tocsr()])
+        sax_i = vstack([sax_i, imputer.next_forward().tocsr()])
 
     return sax_i.astype(int)
 
@@ -121,7 +121,7 @@ def fpo(sax_o, imputer, batch_size, p, q):
     # Get ground of truth
     sax_got = csr_matrix((0, sax_o.shape[1]))
     for _ in range(batch_size):
-        sax_got = vstack([sax_got, imputer.stream_next_backward().tocsr()])
+        sax_got = vstack([sax_got, imputer.next_backward().tocsr()])
 
     # Compute feedback
     sax_ob = ((p + q) * sax_got.multiply(sax_o > 0)) - (p * (sax_o > 0).astype(int))

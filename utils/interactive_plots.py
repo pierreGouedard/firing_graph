@@ -1,10 +1,15 @@
 # Global import
-import matplotlib
 import matplotlib.pyplot as plt
+from matplotlib import rc
 import networkx as nx
 
 matplotlib.rcParams['text.usetex'] = True
 matplotlib.rcParams['text.latex.unicode'] = True
+
+
+rc("pdf", fonttype=3)
+rc('font',**{'family': 'serif'})
+rc('text', usetex=True)
 
 
 def plot_graph(ax_graph, layout=None, title=''):
