@@ -3,9 +3,6 @@ import matplotlib.pyplot as plt
 from matplotlib import rc
 import networkx as nx
 
-matplotlib.rcParams['text.usetex'] = True
-matplotlib.rcParams['text.latex.unicode'] = True
-
 
 rc("pdf", fonttype=3)
 rc('font',**{'family': 'serif'})

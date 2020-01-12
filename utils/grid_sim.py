@@ -3,8 +3,8 @@ from scipy.sparse import csc_matrix
 import numpy as np
 
 # Local import
-from ..core.tools.imputers import ArrayImputer
-from ..core.tools.drivers import FileDriver
+from core.tools.imputers import ArrayImputer
+from core.tools.drivers import FileDriver
 
 
 class GridSim(object):
