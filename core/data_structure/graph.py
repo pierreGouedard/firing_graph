@@ -146,10 +146,9 @@ class FiringGraph(object):
         return FiringGraph(project, ax_levels, depth=depth, matrices=d_matrices, graph_id=graph_id)
 
     @staticmethod
-    def from_matrices(project, sax_I, sax_C, sax_O, ax_levels, mask_vertice_drain, depth=2, graph_id=None):
+    def from_matrices(sax_I, sax_C, sax_O, ax_levels, mask_vertice_drain, depth=2, graph_id=None):
         """
 
-        :param project:
         :param sax_I:
         :param sax_C:
         :param sax_O:

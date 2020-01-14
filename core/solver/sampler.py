@@ -1,160 +1,201 @@
 # Global import
 import numpy as np
+from scipy.sparse import csc_matrix
 
 # local import
-from ..data_structure.utils import mat_from_tuples
 from ..data_structure.graph import FiringGraph
 
 
-class Sampler(object):
-    # Firing Graph of depth 2
-    depth_init = 2
+class SupervisedSampler(object):
+    """
 
-    # Firing Graph of depth 3
-    depth_core = 3
-
-    def __init__(self, size, w, imputer, p_sample=1, selected_bits=None, preselected_bits=None, cores=None, supervised=True, verbose=0):
+    """
+    def __init__(self, imputer, n_inputs, n_outputs, p_sample=0.8, n_vertices=10, l0=1, firing_graph=None,
+                 structures=None, max_iter=1000, verbose=0, output_negation=False):
         """
-
-        :param size: list [#input, #output]
-        :param w: int weights of edges of firing graph
+        :param imputer: imputer (see core.tools.imputers)
+        :param n_inputs: list [#input, #output]
+        :param n_outputs: list [#input, #output]
         :param p_sample: float probability of sampling
-        :param imputer: deyep.core.imputers.comon.Imputer
-        :param selected_bits: dict of set of inputs index already sampled in previous iteration (key = output index)
-        :param preselected_bits: dict of set of inputs index from which we want to draw next sample (key = output index)
-        :param supervised: bool
+        :param n_vertices: int
+        :param firing_graph:
+        :param structures:
         :param verbose: int
+        :param output_negation: bool
         """
-        # Core params
-        self.ni, self.no = size[0], size[1]
-        self.w = w
-        self.p_sample = p_sample
-        self.firing_graph = None
-        self.verbose = verbose
-        self.supervised = supervised
-        self.core_vertices = cores if cores is not None else {}
+        # size of problem
+        self.n_inputs, self.n_outputs = n_inputs, n_outputs
 
-        # Get list of preselected and already selected bits if any
-        if preselected_bits is None:
-            self.preselect_bits = {}
-        else:
-            self.preselect_bits = preselected_bits
+        # Sampling parameters
+        self.p_sample, self.n_vertices, self.output_negation = p_sample, n_vertices, output_negation
 
-        if selected_bits is None:
-            self.selected_bits = {}
-        else:
-            self.selected_bits = selected_bits
+        # Utils parameters
+        self.verbose, self.max_iter = verbose, max_iter
 
-        # utils
+        # Structure  parameter
+        self.l0 = l0
+
+        # Core attributes
+        self.firing_graph = firing_graph
+        self.structures = structures
+        self.vertices = None
         self.imputer = imputer
 
-    def reset_imputer(self):
-        self.imputer.stream_features()
-        return self
+    def generative_sampling(self):
 
-    def reset_firing_graph(self):
-        self.core_vertices = {}
-        self.firing_graph = None
+        # Initialisation
+        self.vertices = {i: [] for i in range(self.n_outputs)}
+        ax_selected, n = np.zeros(self.n_outputs, dtype=int), 0
 
-    def sample(self):
+        # Core loop
+        while ax_selected.sum() != len(ax_selected) * self.n_vertices:
 
-        if len(self.preselect_bits) == 0:
-            if self.supervised:
-                self.sample_supervised()
-            else:
-                raise NotImplementedError
-
-        return self
-
-    def sample_supervised(self):
-
-        ax_selected = np.zeros(self.no, dtype=bool)
-
-        # Select bits for each output
-        while ax_selected.sum() != len(ax_selected):
-            sax_si = self.imputer.next_forward()
+            # Get forward and backward signals
+            sax_i = self.imputer.next_forward()
             sax_got = self.imputer.next_backward()
 
+            # Propagate through firing graph
+            if self.firing_graph is not None:
+                sax_o = self.firing_graph.propagate(sax_i)
+            else:
+                sax_o = csc_matrix((1, self.n_outputs))
+
             for i in sax_got.nonzero()[1]:
-                if not ax_selected[i]:
-                    if self.p_sample < 1.:
-                        ax_indices = np.array(sax_si.nonzero()[1])
-                        ax_mask = np.random.binomial(1, self.p_sample, len(ax_indices))
-                        self.preselect_bits[i] = set(ax_indices[ax_mask > 0])
+                if ax_selected[i] < self.n_vertices and sax_o[0, i] == 0:
 
-                    else:
-                        self.preselect_bits[i] = set(sax_si.nonzero()[1])
+                    # Randomly sample active bits
+                    ax_indices = np.array(sax_i.nonzero()[1])
+                    ax_mask = np.random.binomial(1, self.p_sample, len(ax_indices))
 
-                    # Remove already selected bits
-                    if len(self.selected_bits) > 0:
-                        self.preselect_bits[i] = self.preselect_bits[i]\
-                            .difference(set(self.selected_bits.get(i, {})))
+                    # Add sampled bits to list of output i's vertices
+                    if ax_mask.any():
+                        self.vertices[i].append([set(ax_indices[ax_mask > 0])])
+                        ax_selected[i] += 1
 
-                    ax_selected[i] = True
+            n += 1
+
+            if n > self.max_iter:
+                break
 
         return self
 
-    def build_graph_multiple_output(self, name='sampler'):
+    def discriminative_sampling(self):
+
+        # Init
+        self.vertices = {i: [] for i in range(len(self.structures))}
+        ax_selected, n = np.zeros(len(self.structures), dtype=int), 0
+
+        # Core loop
+        while ax_selected.sum() != len(ax_selected) * self.n_vertices:
+
+            # Get forward and backward signals
+            sax_i = self.imputer.next_forward()
+            sax_got = self.imputer.next_backward()
+
+            # Propagate through firing graph
+            if self.firing_graph is not None:
+                sax_o = self.firing_graph.propagate(sax_i)
+            else:
+                sax_o = csc_matrix((1, self.n_outputs))
+
+            # For each output and each structure, sample active bits
+            for i in sax_got.nonzero()[1]:
+                for j, structure in enumerate(self.structures):
+                    if ax_selected[j] < self.n_vertices and structure.propagate(sax_i)[0, i] > 0 and sax_o[0, i] == 0:
+
+                        # Randomly samples active bits
+                        ax_indices = np.array(sax_i.nonzero()[1])
+                        ax_mask = np.random.binomial(1, self.p_sample, len(ax_indices))
+
+                        # Add sampled bits to list of output i vertices
+                        if ax_mask.any():
+                            self.vertices[j] += [set(ax_indices[ax_mask > 0])]
+                            ax_selected[j] += 1
+
+            n += 1
+
+            if n > self.max_iter:
+                break
+
+        return self
+
+    def build_structures(self, weight):
         """
 
         :return:
         """
-        # Init parameter of the firing graph
-        l_edges, d_mask, n_core, d_levels = [], {'I': np.zeros(self.ni)}, 0, {}
 
-        if len(self.selected_bits) == 0:
-            depth = Sampler.depth_init
+        if self.structures is None:
+            for i in range(self.n_outputs):
+                self.structures.extend(self.create_structures(i, weight))
         else:
-            depth = Sampler.depth_core
+            l_structures = []
+            for i, structure in enumerate(self.structures):
+                l_structures.extend(self.augment_structures(i, structure, weight))
 
-        # Build matrices of the firing graph
-        for i in range(self.no):
-            l_edges, d_mask, n_core, d_levels = self.build_graph(i, l_edges, d_mask, n_core, d_levels)
+            self.structures = l_structures
 
-        sax_I, sax_C, sax_O = mat_from_tuples(self.ni, self.no, n_core, l_edges, self.w)
-
-        # Build level array
-        ax_levels = np.zeros(n_core)
-        for i, v in d_levels.items():
-            ax_levels[i] = v
-
-        # Complete mask
-        d_mask['C'] = np.zeros(n_core)
-
-        # Build firing graph
-        self.firing_graph = FiringGraph.from_matrices(name, sax_I, sax_C, sax_O, ax_levels, d_mask, depth)
+        #firing_graph = merge_structures(self.strucures)
 
         return self
 
-    def build_graph(self, i, l_edges, d_mask, n_core, d_levels):
+    def create_structures(self, i, w):
+        """
 
-        # Create first layer of graph (input vertices)
-        for pb in self.preselect_bits[i]:
-            l_edges += [('input_{}'.format(pb), 'core_{}'.format(n_core))]
-            d_mask['I'][pb] = 1
+        :param i:
+        :param w:
+        :return:
+        """
+        # Init
+        n_core = self.n_vertices + 1
+        sax_I, sax_C, ax_levels = csc_matrix((self.n_inputs, 1)), csc_matrix((n_core, n_core)), np.array([self.l0])
+        d_mask = {'I': np.zeros(self.n_inputs), 'C': np.zeros(n_core), 'O': np.zeros(self.n_outputs)}
 
-        # If some bits have already been selected
-        if self.selected_bits:
-            for b in self.selected_bits[i]:
-                l_edges += [('input_{}'.format(b), 'core_{}'.format(n_core + 1))]
+        # Core loop
+        for j, l_bits in enumerate(self.vertices[i]):
+            for bit in l_bits:
+                sax_I[bit, j] = w
+                d_mask['I'][bit] = 1
+                sax_C[j, n_core - 1] = 1
 
-            # Add core edges
-            l_edges += [
-                ('core_{}'.format(n_core), 'core_{}'.format(n_core + 2)),
-                ('core_{}'.format(n_core + 1), 'core_{}'.format(n_core + 2)),
-                ('core_{}'.format(n_core + 2), 'output_{}'.format(i))
-            ]
+            # Set Output connection and level
+            sax_O = csc_matrix((n_core, self.n_outputs))
+            sax_O[n_core - 1, i] = 1
 
-            # Update levels
-            d_levels.update({n_core: 1, n_core + 1: len(self.selected_bits[i]), n_core + 2: 2})
-            self.core_vertices.update({i: ['core_{}'.format(n_core + j) for j in range(3)]})
-            n_core += 3
+            yield FiringGraph.from_matrices(sax_I, sax_C, sax_O, ax_levels, d_mask, depth=2)
 
-        else:
-            # Add core edges and update levels
-            l_edges += [('core_{}'.format(n_core), 'output_{}'.format(i))]
-            d_levels.update({n_core: 1})
-            self.core_vertices.update({i: ['core_{}'.format(n_core)]})
-            n_core += 1
+    def augment_structures(self, i, structure, w):
+        """
 
-        return l_edges, d_mask, n_core, d_levels
+        :param i:
+        :param structure:
+        :param w:
+        :return:
+        """
+        # Init
+        n_core = structure.Cw.shape[0] + self.n_vertices + 2
+        sax_I, sax_C = structure.Iw, csc_matrix((n_core, n_core))
+        d_mask = {'I': np.zeros(self.n_inputs), 'C': np.zeros(n_core), 'O': np.zeros(self.n_outputs)}
+
+        # Set level and init link matrix
+        # TODO since update of links is set at the bit level make sure non fitted edges has large values so to ensure it will not break with draining
+        sax_I[:, :structure.Iw.shape[1]] = structure.Iw * 10000000
+        sax_C[structure.Cw.shape[0]:, structure.Cw.shape[0]] = structure.Cw
+        ax_levels = np.array(list(structure.levels) + [self.l0] * self.n_vertices + [1, 2])
+
+        # Core loop
+        for j, l_bits in enumerate(self.vertices[i]):
+            for bit in l_bits:
+                sax_I[bit, structure.Cw.shape[0] + j] = w
+                sax_C[structure.Cw.shape[0] + j, n_core - 2] = 1
+                structure.mask['I'][bit] = 1
+
+        # Add core edges
+        sax_C[structure.Cw.shape[0] - 1, n_core - 1] = 1
+        sax_C[n_core - 2, n_core - 1] = 1
+
+        # Set outputs
+        sax_O = csc_matrix((n_core, self.n_outputs))
+        sax_O[n_core - 1, structure.Ow.nonzeros()[1]] = 1
+
+        return FiringGraph.from_matrices(sax_I, sax_C, sax_O, ax_levels, d_mask, depth=4)
