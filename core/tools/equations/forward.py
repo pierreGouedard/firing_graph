@@ -79,14 +79,16 @@ def fpi(sax_i, sax_im):
 
 def fpc(sax_c, sax_cm, ax_levels):
     """
-    Store new core forward signal into core forward memory
+    Compute new core forward signal  and store into core forward memory signal if it is not None
 
     :param sax_c: received forward signal
     :type sax_c: scipy.sparse.spmatrix
-    :param sax_cm: forward memory of core vertice
-    :type sax_cm: scipy.sparse.spmatrix
+    :param sax_cm: forward memory of core vertice or None
+    :type sax_cm: scipy.sparse.spmatrix or None
     :param ax_levels: levels of forward vertex
     :type ax_levels: numpy.array
+    :param update_memory: wether or not to update sax_cm
+    :type update_memory: bool
     :return: new forward memory
     :rtype: scipy.sparse.spmatrix
     """
@@ -95,9 +97,11 @@ def fpc(sax_c, sax_cm, ax_levels):
     sax_c = (sax_c - sax_levels > 0).astype(int)
 
     # Get forward signal
-    sax_cm = vstack([sax_c, sax_cm[:sax_cm.shape[0] - sax_c.shape[0], :]])
+    if sax_cm is not None:
+        sax_cm = vstack([sax_c, sax_cm[:sax_cm.shape[0] - sax_c.shape[0], :]])
+        return sax_c, sax_cm
 
-    return sax_c, sax_cm
+    return sax_c
 
 
 def fpo(sax_o, imputer, batch_size, p, q):

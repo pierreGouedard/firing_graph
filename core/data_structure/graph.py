@@ -2,11 +2,13 @@
 import pickle
 import random
 import string
-from scipy.sparse import lil_matrix
+from scipy.sparse import lil_matrix, csc_matrix, hstack, vstack
 import copy
+from numpy import array
 
 # Local import
 from ..data_structure import utils
+from core.tools.equations.forward import ftc, fto, fpc
 
 
 class FiringGraph(object):
@@ -117,51 +119,29 @@ class FiringGraph(object):
         return FiringGraph.from_dict(d_graph, project, graph_id=graph_id)
 
     @staticmethod
-    def from_edges(project, ni, nc, no, l_edges, weights, ax_levels, mask_vertice_drain, depth=2, graph_id=None):
-        """
-
-        :param project:
-        :param ni:
-        :param nc:
-        :param no:
-        :param l_edges:
-        :param weights:
-        :param ax_levels:
-        :param mask_vertice_drain:
-        :param depth:
-        :param graph_id:
-        :return:
-        """
-
-        # Get adjacency matrices
-        sax_I, sax_C, sax_O = utils.mat_from_tuples(ni, no, nc, l_edges, weights)
-
-        # Get dainer mask
-        d_mask = utils.mat_mask_from_vertice_mask(sax_I, sax_C, sax_O, mask_vertice_drain)
-
-        # Init dict of structure of firing graph
-        d_matrices = {'Iw': sax_I, 'Cw': sax_C, 'Ow': sax_O}
-        d_matrices.update(d_mask)
-
-        return FiringGraph(project, ax_levels, depth=depth, matrices=d_matrices, graph_id=graph_id)
-
-    @staticmethod
-    def from_matrices(sax_I, sax_C, sax_O, ax_levels, mask_vertice_drain, depth=2, graph_id=None):
+    def from_matrices(sax_I, sax_C, sax_O, ax_levels, mask_matrices=None, mask_vertices=None, depth=2, project='fg',
+                      graph_id=None):
         """
 
         :param sax_I:
         :param sax_C:
         :param sax_O:
         :param ax_levels:
-        :param mask_vertice_drain:
+        :param mask_matrices:
+        :param mask_vertices:
         :param depth:
+        :param project:
         :param graph_id:
         :return:
         """
 
-        # Get dainer mask matrices
-        d_mask = utils.mat_mask_from_vertice_mask(sax_I, sax_C, sax_O, mask_vertice_drain)
-        d_matrices = dict(list(d_mask.items()) + [('Iw', sax_I), ('Cw', sax_C), ('Ow', sax_O)])
+        if not any([mask_matrices is not None, mask_vertices is not None]):
+            raise ValueError("Either mask should be set for vertices or direct link matrices")
+
+        if mask_vertices is not None:
+            mask_matrices = utils.mat_mask_from_vertice_mask(sax_I, sax_C, sax_O, mask_vertices)
+
+        d_matrices = dict(list(mask_matrices.items()) + [('Iw', sax_I), ('Cw', sax_C), ('Ow', sax_O)])
 
         return FiringGraph(project, ax_levels, depth=depth, matrices=d_matrices, graph_id=graph_id)
 
@@ -180,6 +160,29 @@ class FiringGraph(object):
         )
 
         return fg
+
+    def propagate(self, sax_i):
+        """
+
+        :param sax_i:
+        :return:
+        """
+
+        # Init core signal to all zeros
+        sax_c = csc_matrix((sax_i.shape[0], self.C.shape[0]))
+
+        for i in range(self.depth - 1):
+
+            # Core transmit
+            sax_c = ftc(self.C, self.I, sax_c, sax_i)
+            sax_c = fpc(sax_c, None, self.levels)
+
+            if i == 0:
+                sax_i = csc_matrix(sax_i.shape)
+
+        sax_o = fto(self.O, sax_c)
+
+        return sax_o
 
     def save_as_pickle(self, path):
         d_graph = self.to_dict()
@@ -201,3 +204,53 @@ class FiringGraph(object):
 
     def copy(self):
         return self.from_dict(self.to_dict(is_copy=True), self.project, self.graph_id)
+
+
+def merge_firing_graph(l_firing_graph, n_inputs, n_outputs):
+    """
+
+    :param l_firing_graph:
+    :param n_inputs:
+    :param n_outputs:
+    :return:
+    """
+
+    try:
+        assert(len(set([fg.depth for fg in l_firing_graph])) == 1)
+        depth = l_firing_graph[0].depth
+
+    except AssertionError:
+        raise ValueError("Firing graph merge is possible only if all firing graph has the same depth.")
+
+    sax_I, sax_C, sax_O, l_levels = lil_matrix((n_inputs, 0)), lil_matrix((0, 0)), lil_matrix((0, n_outputs)), []
+    d_masks = {
+        'Im': lil_matrix((n_inputs, 0), dtype=bool),
+        'Cm': lil_matrix((0, 0), dtype=bool),
+        'Om': lil_matrix((0, n_outputs), dtype=bool)
+    }
+    for firing_graph in l_firing_graph:
+
+        # Merge io matrices
+        sax_I = hstack([sax_I, firing_graph.Iw.tolil()])
+        sax_O = vstack([sax_O, firing_graph.Ow.tolil()])
+
+        # Merge Core matrices
+        sax_C_new = hstack([lil_matrix((firing_graph.Cw.shape[0], sax_C.shape[1])), firing_graph.Cw.tolil()])
+        sax_C = hstack([sax_C, lil_matrix((sax_C.shape[0], firing_graph.Cw.shape[1]))])
+        sax_C = vstack([sax_C, sax_C_new])
+
+        # Merge io masks
+        d_masks['Im'] = hstack([d_masks['Im'], firing_graph.Im.tolil()])
+        d_masks['Om'] = vstack([d_masks['Om'], firing_graph.Om.tolil()])
+
+        # Merge Core masks
+        mask_C_new = hstack([lil_matrix((firing_graph.Cm.shape[0], d_masks['Cm'].shape[1])), firing_graph.Cm.tolil()])
+        mask_C = hstack([d_masks['Cm'], lil_matrix((d_masks['Cm'].shape[0], firing_graph.Cm.shape[1]))])
+        d_masks['Cm'] = vstack([mask_C, mask_C_new])
+
+        # Merge levels
+        l_levels.extend(list(firing_graph.levels))
+
+    return FiringGraph.from_matrices(
+        sax_I.tocsc(), sax_C.tocsc(), sax_O.tocsc(), array(l_levels), mask_matrices=d_masks, depth=depth
+    )

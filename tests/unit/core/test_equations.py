@@ -64,15 +64,15 @@ class TestEquations(unittest.TestCase):
 
         # Create firing graphs
         self.fga = FiringGraph.from_matrices(
-            'test_equation_a', self.sax_I, self.sax_C, self.sax_O, self.levels,  self.mask_vertice_drain_a
+            'test_equation_a', self.sax_I, self.sax_C, self.sax_O, self.levels,  mask_vertices=self.mask_vertice_drain_a
         )
 
         self.fgb = FiringGraph.from_matrices(
-            'test_equation_b', self.sax_I, self.sax_C, self.sax_O, self.levels,  self.mask_vertice_drain_b
+            'test_equation_b', self.sax_I, self.sax_C, self.sax_O, self.levels,  mask_vertices=self.mask_vertice_drain_b
         )
 
         self.fgc = FiringGraph.from_matrices(
-            'test_equation_c', self.sax_I, self.sax_C, self.sax_O, self.levels,  self.mask_vertice_drain_c
+            'test_equation_c', self.sax_I, self.sax_C, self.sax_O, self.levels,  mask_vertices=self.mask_vertice_drain_c
         )
 
         # Create test signals

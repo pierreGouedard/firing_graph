@@ -1,9 +1,9 @@
 # Global import
 import numpy as np
-from scipy.sparse import csc_matrix
+from scipy.sparse import csc_matrix, lil_matrix
 
 # local import
-from ..data_structure.graph import FiringGraph
+from ..data_structure.graph import FiringGraph, merge_firing_graph
 
 
 class SupervisedSampler(object):
@@ -69,7 +69,7 @@ class SupervisedSampler(object):
 
                     # Add sampled bits to list of output i's vertices
                     if ax_mask.any():
-                        self.vertices[i].append([set(ax_indices[ax_mask > 0])])
+                        self.vertices[i].extend([set(ax_indices[ax_mask > 0])])
                         ax_selected[i] += 1
 
             n += 1
@@ -109,7 +109,7 @@ class SupervisedSampler(object):
 
                         # Add sampled bits to list of output i vertices
                         if ax_mask.any():
-                            self.vertices[j] += [set(ax_indices[ax_mask > 0])]
+                            self.vertices[j].extend([set(ax_indices[ax_mask > 0])])
                             ax_selected[j] += 1
 
             n += 1
@@ -119,25 +119,32 @@ class SupervisedSampler(object):
 
         return self
 
-    def build_structures(self, weight):
+    def build_firing_graph(self, weight):
         """
 
         :return:
         """
 
+        if self.vertices is None:
+            raise ValueError(
+                "Before Building firing graph, one need to sample input bits using generative or discriminative "
+                "sampling"
+            )
+
         if self.structures is None:
+            self.structures = []
             for i in range(self.n_outputs):
-                self.structures.extend(self.create_structures(i, weight))
+                self.structures.append(self.create_structures(i, weight))
         else:
             l_structures = []
             for i, structure in enumerate(self.structures):
-                l_structures.extend(self.augment_structures(i, structure, weight))
+                l_structures.append(self.augment_structures(i, structure, weight))
 
             self.structures = l_structures
 
-        #firing_graph = merge_structures(self.strucures)
+        firing_graph = merge_firing_graph(self.structures, self.n_inputs, self.n_outputs)
 
-        return self
+        return firing_graph
 
     def create_structures(self, i, w):
         """
@@ -148,21 +155,27 @@ class SupervisedSampler(object):
         """
         # Init
         n_core = self.n_vertices + 1
-        sax_I, sax_C, ax_levels = csc_matrix((self.n_inputs, 1)), csc_matrix((n_core, n_core)), np.array([self.l0])
-        d_mask = {'I': np.zeros(self.n_inputs), 'C': np.zeros(n_core), 'O': np.zeros(self.n_outputs)}
+        sax_I, sax_C, ax_levels = lil_matrix((self.n_inputs, n_core)), lil_matrix((n_core, n_core)), np.array([self.l0])
+        d_mask = {
+            'Im': lil_matrix((self.n_inputs, n_core), dtype=bool),
+            'Cm': lil_matrix((n_core, n_core), dtype=bool),
+            'Om': lil_matrix((n_core, self.n_outputs), dtype=bool)
+        }
 
         # Core loop
         for j, l_bits in enumerate(self.vertices[i]):
             for bit in l_bits:
                 sax_I[bit, j] = w
-                d_mask['I'][bit] = 1
+                d_mask['Im'][bit, j] = True
                 sax_C[j, n_core - 1] = 1
 
-            # Set Output connection and level
-            sax_O = csc_matrix((n_core, self.n_outputs))
-            sax_O[n_core - 1, i] = 1
+        # Set Output connection and level
+        sax_O = lil_matrix((n_core, self.n_outputs))
+        sax_O[n_core - 1, i] = 1
 
-            yield FiringGraph.from_matrices(sax_I, sax_C, sax_O, ax_levels, d_mask, depth=2)
+        return FiringGraph.from_matrices(
+            sax_I.tocsc(), sax_C.tocsc(), sax_O.tocsc(), ax_levels, mask_matrices=d_mask, depth=3
+        )
 
     def augment_structures(self, i, structure, w):
         """
@@ -170,17 +183,21 @@ class SupervisedSampler(object):
         :param i:
         :param structure:
         :param w:
+        :param w_max:
         :return:
         """
         # Init
         n_core = structure.Cw.shape[0] + self.n_vertices + 2
-        sax_I, sax_C = structure.Iw, csc_matrix((n_core, n_core))
-        d_mask = {'I': np.zeros(self.n_inputs), 'C': np.zeros(n_core), 'O': np.zeros(self.n_outputs)}
+        sax_I, sax_C = lil_matrix((self.n_inputs, n_core)), lil_matrix((n_core, n_core))
+        d_mask = {
+            'Im': lil_matrix((self.n_inputs, n_core), dtype=bool),
+            'Cm': lil_matrix((n_core, n_core), dtype=bool),
+            'Om': lil_matrix((n_core, self.n_outputs), dtype=bool)
+        }
 
         # Set level and init link matrix
-        # TODO since update of links is set at the bit level make sure non fitted edges has large values so to ensure it will not break with draining
-        sax_I[:, :structure.Iw.shape[1]] = structure.Iw * 10000000
-        sax_C[structure.Cw.shape[0]:, structure.Cw.shape[0]] = structure.Cw
+        sax_I[:, :structure.Iw.shape[1]] = structure.Iw.tolil()
+        sax_C[:structure.Cw.shape[0], :structure.Cw.shape[0]] = structure.Cw.tolil()
         ax_levels = np.array(list(structure.levels) + [self.l0] * self.n_vertices + [1, 2])
 
         # Core loop
@@ -188,14 +205,16 @@ class SupervisedSampler(object):
             for bit in l_bits:
                 sax_I[bit, structure.Cw.shape[0] + j] = w
                 sax_C[structure.Cw.shape[0] + j, n_core - 2] = 1
-                structure.mask['I'][bit] = 1
+                d_mask['Im'][bit, structure.Cw.shape[0] + j] = True
 
         # Add core edges
         sax_C[structure.Cw.shape[0] - 1, n_core - 1] = 1
         sax_C[n_core - 2, n_core - 1] = 1
 
         # Set outputs
-        sax_O = csc_matrix((n_core, self.n_outputs))
-        sax_O[n_core - 1, structure.Ow.nonzeros()[1]] = 1
+        sax_O = lil_matrix((n_core, self.n_outputs))
+        sax_O[n_core - 1, int(structure.Ow.nonzero()[1])] = 1
 
-        return FiringGraph.from_matrices(sax_I, sax_C, sax_O, ax_levels, d_mask, depth=4)
+        return FiringGraph.from_matrices(
+            sax_I.tocsc(), sax_C.tocsc(), sax_O.tocsc(), ax_levels, mask_matrices=d_mask, depth=4
+        )

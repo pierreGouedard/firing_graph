@@ -1,6 +1,6 @@
 # Global imports
 import numpy as np
-from scipy.sparse import diags, lil_matrix
+from scipy.sparse import diags, lil_matrix, hstack, vstack
 
 
 def mat_from_tuples(ni, no, nc, l_edges, weights):
