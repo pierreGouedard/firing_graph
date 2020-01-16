@@ -227,12 +227,12 @@ class SupervisedSampler(object):
         # Set partitions
         partitions = [
             {
-                'mapping': {i: i for i in range(structure.Cw.shape[1])},
+                'indices': range(structure.Cw.shape[1]),
                 'name': "base",
                 "depth": 4
             },
             {
-                'mapping': {i: structure.Cw.shape[1] + i for i in range(sax_C.shape[1] - structure.Cw.shape[1] - 2)},
+                'indices': [structure.Cw.shape[1] + i for i in range(sax_C.shape[1] - structure.Cw.shape[1] - 2)],
                 "name": "transient",
                 "depth": 3
             },

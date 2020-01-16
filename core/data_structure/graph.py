@@ -239,7 +239,7 @@ def merge_firing_graph(l_firing_graph, n_inputs, n_outputs, key_partition=lambda
 
         # Set partitions
         l_partitions.append({
-            'mapping': {i: n_core_current + key_partition(i) for i in range(firing_graph.Cw.shape[1])},
+            'indices': [n_core_current + key_partition(i) for i in range(firing_graph.Cw.shape[1])],
             'depth': firing_graph.depth
         })
 
