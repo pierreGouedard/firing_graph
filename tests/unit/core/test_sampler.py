@@ -48,7 +48,7 @@ class TestSampler(unittest.TestCase):
         self.assertEqual(len(sampler.vertices), self.no)
         self.assertTrue(all([len(l_v) == self.n_vertices for _, l_v in sampler.vertices.items()]))
 
-        firing_graph = sampler.build_firing_graph(self.weight)
+        firing_graph = sampler.build_firing_graph(list(np.ones(self.no) * self.weight))
 
         # Check structures
         self.assertEqual(len(sampler.structures), self.no)
@@ -91,14 +91,14 @@ class TestSampler(unittest.TestCase):
         self.assertEqual(len(sampler.vertices), len(self.structures))
         self.assertTrue(all([len(l_v) == self.n_vertices for _, l_v in sampler.vertices.items()]))
 
-        firing_graph = sampler.build_firing_graph(self.weight)
+        firing_graph = sampler.build_firing_graph(list(np.ones(len(self.structures)) * self.weight))
 
         # Check structures
         self.assertEqual(len(sampler.structures), len(self.structures))
         self.assertTrue(all([sampler.structures[i].Iw.shape[0] == self.ni for i in range(len(self.structures))]))
         self.assertTrue(all([sampler.structures[i].Ow.shape[1] == self.no for i in range(len(self.structures))]))
         self.assertTrue(
-            all([sampler.structures[i].Cw.shape[0] == self.n_vertices + 5 for i in range(len(self.structures))])
+            all([sampler.structures[i].Cw.shape[0] == self.n_vertices + 8 for i in range(len(self.structures))])
         )
 
         # Check dimension of the firing graph
@@ -106,8 +106,8 @@ class TestSampler(unittest.TestCase):
         self.assertEqual(firing_graph.Ow.shape[1], self.no)
         self.assertEqual(firing_graph.Ow.shape[0], firing_graph.Iw.shape[1])
         self.assertEqual(firing_graph.Cw.shape[0], firing_graph.Iw.shape[1])
-        self.assertEqual(firing_graph.Cw.shape[0], (self.n_vertices + 5) * len(self.structures))
-        self.assertEqual(firing_graph.depth, 4)
+        self.assertEqual(firing_graph.Cw.shape[0], (self.n_vertices + 8) * len(self.structures))
+        self.assertEqual(firing_graph.depth, 5)
 
         # Check update masks
         self.assertTrue(not any([fg.Im.toarray()[:, :3].any() for fg in sampler.structures]))
@@ -133,22 +133,22 @@ def generate_random_structures(i, n_structure, n_inputs, n_outputs, n_pos=3, n_n
          ) for _ in range(n_structure)
     ]
 
-    d_mask, ax_levels = {'I': np.zeros(n_inputs), 'C': np.zeros(3), 'O': np.zeros(n_outputs)}, np.ones(3)
+    d_mask, ax_levels = {'I': np.zeros(n_inputs), 'C': np.zeros(5), 'O': np.zeros(n_outputs)}, np.ones(5)
     l_structures = []
     for bit_pos, bit_neg in l_vertices:
 
         # Init matrices
-        sax_I, sax_C, sax_O = lil_matrix((n_inputs, 3)), lil_matrix((3, 3)), lil_matrix((3, n_outputs))
+        sax_I, sax_C, sax_O = lil_matrix((n_inputs, 5)), lil_matrix((5, 5)), lil_matrix((5, n_outputs))
 
         # Set links
         sax_I[bit_pos, 0] = 1
         sax_I[bit_neg, 1] = 1
-        sax_C[[0, 1], 2] = 1
-        sax_O[2, i] = 1
+        sax_C[0, 2], sax_C[[0, 1], 3], sax_C[2, 4], sax_C[3, 4] = 1, 1, 1, 1
+        sax_O[4, i] = 1
 
         # Append structure
         l_structures.append(
-            FiringGraph.from_matrices(sax_I, sax_C, sax_O, ax_levels.copy(), mask_vertices=d_mask.copy(), depth=3)
+            FiringGraph.from_matrices(sax_I, sax_C, sax_O, ax_levels.copy(), mask_vertices=d_mask.copy(), depth=4)
         )
 
     return l_structures, l_vertices

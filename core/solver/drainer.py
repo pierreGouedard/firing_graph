@@ -59,6 +59,7 @@ class FiringGraphDrainer(object):
             if self.firing_graph.Im.nnz == 0 and self.firing_graph.Cm.nnz == 0 and self.firing_graph.Om.nnz == 0:
                 stop = True
 
+            # TODO: here we have to set a max iteration in all, additionning the different batch size.
             if j > max_batch_iteration:
                 stop = True
 

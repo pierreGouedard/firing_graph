@@ -18,7 +18,7 @@ class FiringGraph(object):
     track of the firing of vertices.
 
     """
-    def __init__(self, project, ax_levels, matrices, depth=2, graph_id=None, is_drained=False):
+    def __init__(self, project, ax_levels, matrices, depth=2, graph_id=None, is_drained=False, partitions=None):
 
         if graph_id is None:
             graph_id = ''.join([random.choice(string.ascii_letters) for _ in range(5)])
@@ -31,6 +31,7 @@ class FiringGraph(object):
         self.depth = depth
         self.levels = ax_levels
         self.matrices = matrices
+        self.partitions = partitions
 
         # Tracking
         self.backward_firing = {
@@ -120,7 +121,7 @@ class FiringGraph(object):
 
     @staticmethod
     def from_matrices(sax_I, sax_C, sax_O, ax_levels, mask_matrices=None, mask_vertices=None, depth=2, project='fg',
-                      graph_id=None):
+                      graph_id=None, partitions=None):
         """
 
         :param sax_I:
@@ -132,6 +133,7 @@ class FiringGraph(object):
         :param depth:
         :param project:
         :param graph_id:
+        :param partitions:
         :return:
         """
 
@@ -143,7 +145,9 @@ class FiringGraph(object):
 
         d_matrices = dict(list(mask_matrices.items()) + [('Iw', sax_I), ('Cw', sax_C), ('Ow', sax_O)])
 
-        return FiringGraph(project, ax_levels, depth=depth, matrices=d_matrices, graph_id=graph_id)
+        return FiringGraph(
+            project, ax_levels, depth=depth, matrices=d_matrices, graph_id=graph_id, partitions=partitions
+        )
 
     @staticmethod
     def from_dict(d_graph, project, graph_id=None):
@@ -206,12 +210,13 @@ class FiringGraph(object):
         return self.from_dict(self.to_dict(is_copy=True), self.project, self.graph_id)
 
 
-def merge_firing_graph(l_firing_graph, n_inputs, n_outputs):
+def merge_firing_graph(l_firing_graph, n_inputs, n_outputs, key_partition=lambda x: x):
     """
 
     :param l_firing_graph:
     :param n_inputs:
     :param n_outputs:
+    :param key_partition:
     :return:
     """
 
@@ -222,13 +227,26 @@ def merge_firing_graph(l_firing_graph, n_inputs, n_outputs):
     except AssertionError:
         raise ValueError("Firing graph merge is possible only if all firing graph has the same depth.")
 
+    l_partitions, n_core_current = [], 0
     sax_I, sax_C, sax_O, l_levels = lil_matrix((n_inputs, 0)), lil_matrix((0, 0)), lil_matrix((0, n_outputs)), []
     d_masks = {
         'Im': lil_matrix((n_inputs, 0), dtype=bool),
         'Cm': lil_matrix((0, 0), dtype=bool),
         'Om': lil_matrix((0, n_outputs), dtype=bool)
     }
+
     for firing_graph in l_firing_graph:
+
+        # Set partitions
+        l_partitions.append({
+            'mapping': {i: n_core_current + key_partition(i) for i in range(firing_graph.Cw.shape[1])},
+            'depth': firing_graph.depth
+        })
+
+        if firing_graph.partitions is not None:
+            l_partitions[-1].update({'partitions': firing_graph.partitions})
+
+        n_core_current += firing_graph.Cw.shape[1]
 
         # Merge io matrices
         sax_I = hstack([sax_I, firing_graph.Iw.tolil()])
@@ -252,5 +270,33 @@ def merge_firing_graph(l_firing_graph, n_inputs, n_outputs):
         l_levels.extend(list(firing_graph.levels))
 
     return FiringGraph.from_matrices(
-        sax_I.tocsc(), sax_C.tocsc(), sax_O.tocsc(), array(l_levels), mask_matrices=d_masks, depth=depth
+        sax_I.tocsc(), sax_C.tocsc(), sax_O.tocsc(), array(l_levels), mask_matrices=d_masks, depth=depth,
+        partitions=l_partitions
+    )
+
+
+def extract_structure(partition, firing_graph):
+    """
+
+    :param partition:
+    :param firing_graph:
+    :return:
+    """
+    l_ind_partition = partition['mapping'].values()
+
+    sax_I = firing_graph.Iw[:, l_ind_partition]
+    sax_C = firing_graph.Cw[l_ind_partition, :][:, l_ind_partition]
+    sax_O = firing_graph.Ow[l_ind_partition, :]
+
+    d_masks = {
+        'Im': firing_graph.Im[:, l_ind_partition],
+        'Cm': firing_graph.Cm[l_ind_partition, :][:, l_ind_partition],
+        'Om': firing_graph.Om[l_ind_partition, :]
+    }
+
+    ax_levels = firing_graph.levels[l_ind_partition]
+
+    return FiringGraph.from_matrices(
+        sax_I.tocsc(), sax_C.tocsc(), sax_O.tocsc(), ax_levels, mask_matrices=d_masks, depth=partition['depth'],
+        partitions=partition.get('partitions', None)
     )
