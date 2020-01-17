@@ -8,7 +8,7 @@ from numpy import array
 
 # Local import
 from ..data_structure import utils
-from core.tools.equations.forward import ftc, fto, fpc
+from ..tools.equations.forward import ftc, fto, fpc
 
 
 class FiringGraph(object):
@@ -282,7 +282,7 @@ def extract_structure(partition, firing_graph):
     :param firing_graph:
     :return:
     """
-    l_ind_partition = partition['mapping'].values()
+    l_ind_partition = partition['indices'].values()
 
     sax_I = firing_graph.Iw[:, l_ind_partition]
     sax_C = firing_graph.Cw[l_ind_partition, :][:, l_ind_partition]
