@@ -68,7 +68,7 @@ class SupervisedSampler(object):
                 if ax_selected[i] < self.n_vertices and sax_o[0, i] == 0:
 
                     # Randomly sample active bits
-                    ax_indices = np.array(sax_i.nonzero()[0])
+                    ax_indices = np.array(sax_i.nonzero()[1])
                     ax_mask = np.random.binomial(1, self.p_sample, len(ax_indices))
 
                     # Add sampled bits to list of output i's vertices
@@ -109,10 +109,14 @@ class SupervisedSampler(object):
             # For each output and each structure, sample active bits
             for i in sax_got.nonzero()[1]:
                 for j, structure in enumerate(self.structures):
+
+                    if i not in structure.O.sum(axis=0).nonzero()[1]:
+                        continue
+
                     l_struct_indices = list(structure.I.nonzero()[0])
 
                     if ax_selected[j] < self.n_vertices and structure.propagate(sax_i)[0, i] > 0 and sax_o[0, i] == 0:
-                        ax_indices = np.array([ind for ind in sax_i.nonzero()[0] if ind not in l_struct_indices])
+                        ax_indices = np.array([ind for ind in sax_i.nonzero()[1] if ind not in l_struct_indices])
                         ax_mask = np.random.binomial(1, self.p_sample, len(ax_indices))
 
                         # Add sampled bits to list of output i vertices
@@ -127,7 +131,7 @@ class SupervisedSampler(object):
 
         return self
 
-    def build_firing_graph(self, l_weights):
+    def build_firing_graph(self, l_weights, return_structures=False):
         """
 
         :return:
@@ -139,18 +143,18 @@ class SupervisedSampler(object):
                 "sampling"
             )
 
+        l_structures = []
         if self.structures is None:
-            self.structures = []
             for i in range(self.n_outputs):
-                self.structures.append(self.create_structures(i, l_weights[i]))
+                l_structures.append(self.create_structures(i, l_weights[i]))
         else:
-            l_structures = []
             for i, structure in enumerate(self.structures):
                 l_structures.append(self.augment_structures(i, structure, l_weights[i]))
 
-            self.structures = l_structures
+        firing_graph = merge_firing_graph(l_structures, self.n_inputs, self.n_outputs)
 
-        firing_graph = merge_firing_graph(self.structures, self.n_inputs, self.n_outputs)
+        if return_structures:
+            return firing_graph, l_structures
 
         return firing_graph
 

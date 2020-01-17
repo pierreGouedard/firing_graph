@@ -20,7 +20,7 @@ class TestSampler(unittest.TestCase):
         self.n_dead = 10
         # Generate random I / O
         self.sax_inputs = hstack(
-            [csc_matrix(np.random.binomial(1, 0.5, (1000, self.ni - self.n_dead))), csc_matrix((1000, self.n_dead))]
+            [csc_matrix(np.random.binomial(1, 0.7, (1000, self.ni - self.n_dead))), csc_matrix((1000, self.n_dead))]
         )
         self.sax_outputs = csc_matrix(np.random.binomial(1, 0.5, (1000, self.no)))
 
@@ -40,7 +40,7 @@ class TestSampler(unittest.TestCase):
         """
         # Instantiate sampler
         imputer = init_imputer(self.sax_inputs, self.sax_outputs)
-        sampler = SupervisedSampler(imputer, self.ni, self.no, self.p_sample, self.n_vertices)
+        sampler = SupervisedSampler(imputer, self.ni, self.no, self.p_sample, self.n_vertices, max_iter=100)
 
         # Sample vertices
         sampler.generative_sampling()
@@ -48,13 +48,15 @@ class TestSampler(unittest.TestCase):
         self.assertEqual(len(sampler.vertices), self.no)
         self.assertTrue(all([len(l_v) == self.n_vertices for _, l_v in sampler.vertices.items()]))
 
-        firing_graph = sampler.build_firing_graph(list(np.ones(self.no) * self.weight))
+        firing_graph, l_structures = sampler.build_firing_graph(
+            list(np.ones(self.no) * self.weight), return_structures=True
+        )
 
         # Check structures
-        self.assertEqual(len(sampler.structures), self.no)
-        self.assertTrue(all([sampler.structures[i].Iw.shape[0] == self.ni for i in range(self.no)]))
-        self.assertTrue(all([sampler.structures[i].Ow.shape[1] == self.no for i in range(self.no)]))
-        self.assertTrue(all([sampler.structures[i].Cw.shape[0] == self.n_vertices + 1 for i in range(self.no)]))
+        self.assertEqual(len(l_structures), self.no)
+        self.assertTrue(all([l_structures[i].Iw.shape[0] == self.ni for i in range(self.no)]))
+        self.assertTrue(all([l_structures[i].Ow.shape[1] == self.no for i in range(self.no)]))
+        self.assertTrue(all([l_structures[i].Cw.shape[0] == self.n_vertices + 1 for i in range(self.no)]))
 
         # Check dimension of the firing graph
         self.assertEqual(firing_graph.Iw.shape[0], self.ni)
@@ -71,6 +73,11 @@ class TestSampler(unittest.TestCase):
         self.assertTrue(not firing_graph.Om.toarray().any())
         self.assertTrue(not (firing_graph.Iw.toarray() > self.weight).any())
 
+        # Test sampler behvipur if no bits sampled
+        sampler.vertices = {i: [] for i in range(self.no)}
+        firing_graph = sampler.build_firing_graph(list(np.ones(self.no) * self.weight))
+        self.assertEqual(firing_graph.I.nnz, 0)
+
     def test_augment_firing_graph(self):
         """
         sampler test for first usage (initialisation)
@@ -81,7 +88,7 @@ class TestSampler(unittest.TestCase):
         # Instantiate sampler
         imputer = init_imputer(self.sax_inputs, self.sax_outputs)
         sampler = SupervisedSampler(
-            imputer, self.ni, self.no, self.p_sample, self.n_vertices, structures=self.structures
+            imputer, self.ni, self.no, self.p_sample, self.n_vertices, structures=self.structures, max_iter=100
         )
 
         # Sample vertices
@@ -91,15 +98,15 @@ class TestSampler(unittest.TestCase):
         self.assertEqual(len(sampler.vertices), len(self.structures))
         self.assertTrue(all([len(l_v) == self.n_vertices for _, l_v in sampler.vertices.items()]))
 
-        firing_graph = sampler.build_firing_graph(list(np.ones(len(self.structures)) * self.weight))
+        firing_graph, l_structures = sampler.build_firing_graph(
+            list(np.ones(len(self.structures)) * self.weight), return_structures=True
+        )
 
         # Check structures
-        self.assertEqual(len(sampler.structures), len(self.structures))
-        self.assertTrue(all([sampler.structures[i].Iw.shape[0] == self.ni for i in range(len(self.structures))]))
-        self.assertTrue(all([sampler.structures[i].Ow.shape[1] == self.no for i in range(len(self.structures))]))
-        self.assertTrue(
-            all([sampler.structures[i].Cw.shape[0] == self.n_vertices + 8 for i in range(len(self.structures))])
-        )
+        self.assertEqual(len(l_structures), len(self.structures))
+        self.assertTrue(all([l_structures[i].Iw.shape[0] == self.ni for i in range(len(self.structures))]))
+        self.assertTrue(all([l_structures[i].Ow.shape[1] == self.no for i in range(len(self.structures))]))
+        self.assertTrue(all([l_structures[i].Cw.shape[0] == self.n_vertices + 8 for i in range(len(self.structures))]))
 
         # Check dimension of the firing graph
         self.assertEqual(firing_graph.Iw.shape[0], self.ni)
@@ -114,8 +121,15 @@ class TestSampler(unittest.TestCase):
         self.assertTrue(not firing_graph.Cm.toarray().any())
         self.assertTrue(not firing_graph.Om.toarray().any())
 
+        # Test sampler behaviour if no bits sampled
+        sampler.vertices = {i: [] for i in range(len(self.structures))}
+        firing_graph = sampler.build_firing_graph(list(np.ones(len(self.structures)) * self.weight))
 
-def generate_random_structures(i, n_structure, n_inputs, n_outputs, n_pos=3, n_neg=2):
+        for partition in firing_graph.partitions:
+            self.assertEqual(firing_graph.I[:, partition['partitions'][-1]['indices']].nnz, 0)
+
+
+def generate_random_structures(i, n_structure, n_inputs, n_outputs, n_pos=2, n_neg=2):
     """
 
     :param i:
@@ -134,6 +148,7 @@ def generate_random_structures(i, n_structure, n_inputs, n_outputs, n_pos=3, n_n
     ]
 
     d_mask, ax_levels = {'I': np.zeros(n_inputs), 'C': np.zeros(5), 'O': np.zeros(n_outputs)}, np.ones(5)
+    ax_levels = np.array([1, 1, 1, 1, 1])
     l_structures = []
     for bit_pos, bit_neg in l_vertices:
 
