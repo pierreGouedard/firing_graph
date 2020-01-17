@@ -282,7 +282,7 @@ def extract_structure(partition, firing_graph):
     :param firing_graph:
     :return:
     """
-    l_ind_partition = partition['indices'].values()
+    l_ind_partition = partition['indices']
 
     sax_I = firing_graph.Iw[:, l_ind_partition]
     sax_C = firing_graph.Cw[l_ind_partition, :][:, l_ind_partition]
