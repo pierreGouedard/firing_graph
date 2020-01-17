@@ -46,9 +46,9 @@ class FiringGraphDrainer(object):
     def reset_backward(self):
         self.sax_cb, self.sax_ob = init_backward_signal(self.firing_graph, self.bs)
 
-    def drain_all(self, max_batch_iteration=10000, adapt_bs=False):
+    def drain_all(self, t_max=10000, adapt_bs=False):
 
-        stop, j, max_batch_size = False, 0, self.bs
+        stop, t, max_batch_size = False, 0, self.bs
         while not stop:
             for _ in range(int(max_batch_size / self.bs)):
                 # Drain and reset signals
@@ -59,11 +59,10 @@ class FiringGraphDrainer(object):
             if self.firing_graph.Im.nnz == 0 and self.firing_graph.Cm.nnz == 0 and self.firing_graph.Om.nnz == 0:
                 stop = True
 
-            # TODO: here we have to set a max iteration in all, add the different batch size.
-            if j > max_batch_iteration:
+            if t > t_max:
                 stop = True
 
-            j += 1
+            j += self.bs
             print("[Drainer]: {} batch has been completed".format(j * self.bs))
 
             # Adapt batch size if specified
