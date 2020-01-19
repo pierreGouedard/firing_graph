@@ -63,7 +63,7 @@ class FiringGraphDrainer(object):
                 stop = True
 
             j += self.bs
-            print("[Drainer]: {} batch has been completed".format(j * self.bs))
+            print("[Drainer]: {} iterations has been completed".format(j * self.bs))
 
             # Adapt batch size if specified
             if adapt_bs:
@@ -146,9 +146,6 @@ class FiringGraphDrainer(object):
 
         # Core transmit
         self.sax_c = ftc(self.firing_graph.C, self.firing_graph.I, self.sax_c, self.sax_i)
-
-        # Udpate forward tracking
-        self.firing_graph.update_forward_firing(self.sax_i, self.sax_c, self.sax_o)
 
     def forward_processing(self, load_output=True):
 

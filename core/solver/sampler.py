@@ -1,9 +1,9 @@
 # Global import
 import numpy as np
-from scipy.sparse import csc_matrix, lil_matrix
+from scipy.sparse import csc_matrix, lil_matrix, hstack, vstack
 
 # local import
-from ..data_structure.graph import FiringGraph, merge_firing_graph
+from ..data_structure.graph import FiringGraph
 
 
 class SupervisedSampler(object):
@@ -151,7 +151,7 @@ class SupervisedSampler(object):
             for i, structure in enumerate(self.structures):
                 l_structures.append(self.augment_structures(i, structure, l_weights[i]))
 
-        firing_graph = merge_firing_graph(l_structures, self.n_inputs, self.n_outputs)
+        firing_graph = self.merge_structures(l_structures)
 
         if return_structures:
             return firing_graph, l_structures
@@ -244,4 +244,103 @@ class SupervisedSampler(object):
 
         return FiringGraph.from_matrices(
             sax_I.tocsc(), sax_C.tocsc(), sax_O.tocsc(), ax_levels, mask_matrices=d_mask, depth=5, partitions=partitions
+        )
+
+    def merge_structures(self, l_structures):
+        """
+    
+        :param l_structures:
+        :return:
+        """
+        # Make sure all graph has the same depth
+        assert(len(set([fg.depth for fg in l_structures])) == 1), "Firing graph merge is possible only if all firing " \
+                                                                  "graph has the same depth."
+
+        l_partitions, n_core_current, l_levels, depth = [], 0, [], l_structures[0].depth
+        sax_I, sax_C, sax_O = lil_matrix((self.n_inputs, 0)), lil_matrix((0, 0)), lil_matrix((0, self.n_outputs))
+        d_masks = {
+            'Im': lil_matrix((self.n_inputs, 0), dtype=bool),
+            'Cm': lil_matrix((0, 0), dtype=bool),
+            'Om': lil_matrix((0, self.n_outputs), dtype=bool)
+        }
+    
+        for structure in l_structures:
+    
+            # Set partitions
+            l_partitions.append({
+                'indices': [n_core_current + i for i in range(structure.Cw.shape[1])],
+                'depth': structure.depth,
+            })
+    
+            if structure.partitions is not None:
+                l_partitions[-1].update({'partitions': structure.partitions})
+    
+            n_core_current += structure.Cw.shape[1]
+    
+            # Merge io matrices
+            sax_I = hstack([sax_I, structure.Iw.tolil()])
+            sax_O = vstack([sax_O, structure.Ow.tolil()])
+    
+            # Merge Core matrices
+            sax_C_new = hstack([lil_matrix((structure.Cw.shape[0], sax_C.shape[1])), structure.Cw.tolil()])
+            sax_C = hstack([sax_C, lil_matrix((sax_C.shape[0], structure.Cw.shape[1]))])
+            sax_C = vstack([sax_C, sax_C_new])
+    
+            # Merge io masks
+            d_masks['Im'] = hstack([d_masks['Im'], structure.Im.tolil()])
+            d_masks['Om'] = vstack([d_masks['Om'], structure.Om.tolil()])
+    
+            # Merge Core masks
+            mask_C_new = hstack([lil_matrix((structure.Cm.shape[0], d_masks['Cm'].shape[1])), structure.Cm.tolil()])
+            mask_C = hstack([d_masks['Cm'], lil_matrix((d_masks['Cm'].shape[0], structure.Cm.shape[1]))])
+            d_masks['Cm'] = vstack([mask_C, mask_C_new])
+    
+            # Merge levels
+            l_levels.extend(list(structure.levels))
+    
+        return FiringGraph.from_matrices(
+            sax_I.tocsc(), sax_C.tocsc(), sax_O.tocsc(), np.array(l_levels), mask_matrices=d_masks, depth=depth,
+            partitions=l_partitions
+        )
+
+    def merge_firing_graph(self, firing_graph):
+        if self.firing_graph is None:
+            self.firing_graph = firing_graph
+            return
+
+        # Make sure firing graph has the same depth as existing one
+        assert firing_graph.depth == self.firing_graph.depth, 'Non compatible depth'
+
+        n_core = self.firing_graph.Cw.shape[0] + firing_graph.Cw.shape[0]
+        sax_I, sax_C, sax_O = self.firing_graph.Iw, self.firing_graph.Cw, self.firing_graph.Ow
+        d_masks = {
+            'Im': lil_matrix((self.n_inputs, n_core), dtype=bool),
+            'Cm': lil_matrix((n_core, n_core), dtype=bool),
+            'Om': lil_matrix((n_core, self.n_outputs), dtype=bool)
+        }
+        l_partitions, l_levels = self.firing_graph.partitions, list(self.firing_graph.levels)
+
+        for partitions in firing_graph.partitions:
+
+            # Set partitions
+            l_partitions.append({
+                'indices': [sax_C.shape[0] + i for i in partitions['indices']],
+                'depth': partitions.depth
+            })
+
+        # Merge io matrices
+        sax_I = hstack([sax_I, firing_graph.Iw])
+        sax_O = vstack([sax_O, firing_graph.Ow])
+
+        # Merge Core matrices
+        sax_C_new = hstack([csc_matrix((firing_graph.Cw.shape[0], sax_C.shape[1])), firing_graph.Cw])
+        sax_C = hstack([sax_C, csc_matrix((sax_C.shape[0], firing_graph.Cw.shape[1]))])
+        sax_C = vstack([sax_C, sax_C_new])
+
+        # Merge levels
+        l_levels.extend(list(firing_graph.levels))
+
+        return FiringGraph.from_matrices(
+            sax_I, sax_C, sax_O, np.array(l_levels), mask_matrices=d_masks, depth=self.firing_graph.depth,
+            partitions=l_partitions
         )

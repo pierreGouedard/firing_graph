@@ -114,7 +114,8 @@ class AndPattern2(TestPattern):
         # Build Firing graph
         sax_I, sax_C, sax_O = mat_from_tuples(self.ni * self.no, self.no, self.no, l_edges, weights=self.w)
         self.firing_graph = FiringGraph.from_matrices(
-            'AndPatFinal2', sax_I, sax_C, sax_O, np.ones(self.no), mask_vertices=self.mask_vertice_drain, depth=self.depth
+            sax_I, sax_C, sax_O, np.ones(self.no), mask_vertices=self.mask_vertice_drain, depth=self.depth,
+            project='AndPatFinal2'
         )
 
         return self.firing_graph
@@ -130,7 +131,8 @@ class AndPattern2(TestPattern):
         # Build Firing graph
         sax_I, sax_C, sax_O = mat_from_tuples(self.ni * self.no, self.no, self.no, l_edges, weights=self.w)
         self.firing_graph = FiringGraph.from_matrices(
-            'AndPat2', sax_I, sax_C, sax_O, np.ones(self.no), mask_vertices=self.mask_vertice_drain, depth=self.depth
+            sax_I, sax_C, sax_O, np.ones(self.no), mask_vertices=self.mask_vertice_drain, depth=self.depth,
+            project='AndPat2'
         )
 
         return self.firing_graph
@@ -250,7 +252,8 @@ class AndPattern3(TestPattern):
         # Build Firing graph
         sax_I, sax_C, sax_O = mat_from_tuples(self.ni * self.no, self.no, self.no * self.nc, l_edges, weights=self.w)
         self.firing_graph = FiringGraph.from_matrices(
-            'AndPatFinal3', sax_I, sax_C, sax_O, ax_levels, mask_vertices=self.mask_vertice_drain, depth=self.depth
+            sax_I, sax_C, sax_O, ax_levels, mask_vertices=self.mask_vertice_drain, depth=self.depth,
+            project='AndPatFinal3'
         )
 
         return self.firing_graph
@@ -284,7 +287,8 @@ class AndPattern3(TestPattern):
         # Build Firing graph
         sax_I, sax_C, sax_O = mat_from_tuples(self.ni * self.no, self.no, self.no * self.nc, l_edges, weights=self.w)
         self.firing_graph = FiringGraph.from_matrices(
-            'AndPatInit3', sax_I, sax_C, sax_O, ax_levels, mask_vertices=self.mask_vertice_drain, depth=self.depth
+            sax_I, sax_C, sax_O, ax_levels, mask_vertices=self.mask_vertice_drain, depth=self.depth,
+            project='AndPatInit3'
         )
 
         return self.firing_graph

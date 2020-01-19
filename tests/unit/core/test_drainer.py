@@ -70,7 +70,6 @@ class TestDrainer(unittest.TestCase):
 
         # Get Data and assert result is as expected
         model_fg, I = self.ap2.build_graph_pattern_final(), drainer.firing_graph.Iw
-        track_if = drainer.firing_graph.forward_firing['i']
         track_ib = drainer.firing_graph.backward_firing['i']
 
         # Check correctness of structure
@@ -79,8 +78,6 @@ class TestDrainer(unittest.TestCase):
         # Test firing tracker
         self.assertTrue(all([I[j, 0] == track_ib[j, 0] + self.w0 for j in self.ap2.target[0]]))
         self.assertTrue(all([I[j, 1] == track_ib[j, 1] + self.w0 for j in self.ap2.target[1]]))
-        self.assertTrue(all([track_ib[j, 0] - track_if[0, j] == 0 for j in self.ap2.target[0]]))
-        self.assertTrue(all([track_ib[j, 1] - track_if[0, j] == 0 for j in self.ap2.target[1]]))
 
         # VISUAL TEST:
         if self.visual:
@@ -112,7 +109,6 @@ class TestDrainer(unittest.TestCase):
 
         # Get Data and assert result is as expected
         model_fg, I = self.ap3.build_graph_pattern_final(), drainer.firing_graph.Iw
-        track_if = drainer.firing_graph.forward_firing['i']
         track_ib = drainer.firing_graph.backward_firing['i']
 
         # Make sure that drained structure is as expected
@@ -125,14 +121,6 @@ class TestDrainer(unittest.TestCase):
         )
         self.assertTrue(
             all([I[j, 4] == track_ib[j, 4] + self.w0 for j in self.ap3.target[1]
-                 if j not in self.ap3.target_selected[1]])
-        )
-        self.assertTrue(
-            all([track_ib[j, 1] - track_if[0, j] == 0 for j in self.ap3.target[0]
-                 if j not in self.ap3.target_selected[0]])
-        )
-        self.assertTrue(
-            all([track_ib[j, 4] - track_if[0, j] == 0 for j in self.ap3.target[1]
                  if j not in self.ap3.target_selected[1]])
         )
 

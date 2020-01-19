@@ -39,11 +39,6 @@ class FiringGraph(object):
             'o': lil_matrix(matrices['Ow'].shape),
         }
 
-        self.forward_firing = {
-            'i': lil_matrix((1, matrices['Iw'].shape[0])), 'c': lil_matrix((1, matrices['Cw'].shape[0])),
-            'o': lil_matrix((1, matrices['Ow'].shape[1]))
-        }
-
     @property
     def C(self):
         return self.Cw > 0
@@ -93,20 +88,19 @@ class FiringGraph(object):
         elif key == 'O':
             self.backward_firing['o'] += sax_M
 
-    def update_forward_firing(self, sax_i, sax_c, sax_o):
-        self.forward_firing['i'] += sax_i.sum(axis=0)
-        self.forward_firing['c'] += sax_c.sum(axis=0)
-        self.forward_firing['o'] += sax_o.sum(axis=0)
-
     def update_mask(self, t):
+        if self.matrices['Im'].nnz > 0:
+            self.matrices['Im'] = self.clip_firing(self.matrices['Im'].multiply(self.I), self.backward_firing['i'], t)
 
-        self.matrices['Im'] = self.clip_firing(self.matrices['Im'].multiply(self.I), self.backward_firing['i'], t)
-        self.matrices['Cm'] = self.clip_firing(self.matrices['Cm'].multiply(self.C), self.backward_firing['c'], t)
-        self.matrices['Om'] = self.clip_firing(self.matrices['Om'].multiply(self.O), self.backward_firing['o'], t)
+        if self.matrices['Cm'].nnz > 0:
+            self.matrices['Cm'] = self.clip_firing(self.matrices['Cm'].multiply(self.C), self.backward_firing['c'], t)
+
+        if self.matrices['Om'].nnz > 0:
+            self.matrices['Om'] = self.clip_firing(self.matrices['Om'].multiply(self.O), self.backward_firing['o'], t)
 
     @staticmethod
     def clip_firing(sax_mask, sax_bf, t):
-        for i, j in zip(*sax_mask.multiply(sax_bf).nonzero()):
+        for i, j in zip(*sax_mask.nonzero()):
             if sax_bf[i, j] >= t:
                 sax_mask[i, j] = False
         return sax_mask
@@ -208,71 +202,6 @@ class FiringGraph(object):
 
     def copy(self):
         return self.from_dict(self.to_dict(is_copy=True), self.project, self.graph_id)
-
-
-def merge_firing_graph(l_firing_graph, n_inputs, n_outputs, key_partition=lambda x: x):
-    """
-
-    :param l_firing_graph:
-    :param n_inputs:
-    :param n_outputs:
-    :param key_partition:
-    :return:
-    """
-
-    try:
-        assert(len(set([fg.depth for fg in l_firing_graph])) == 1)
-        depth = l_firing_graph[0].depth
-
-    except AssertionError:
-        raise ValueError("Firing graph merge is possible only if all firing graph has the same depth.")
-
-    l_partitions, n_core_current = [], 0
-    sax_I, sax_C, sax_O, l_levels = lil_matrix((n_inputs, 0)), lil_matrix((0, 0)), lil_matrix((0, n_outputs)), []
-    d_masks = {
-        'Im': lil_matrix((n_inputs, 0), dtype=bool),
-        'Cm': lil_matrix((0, 0), dtype=bool),
-        'Om': lil_matrix((0, n_outputs), dtype=bool)
-    }
-
-    for firing_graph in l_firing_graph:
-
-        # Set partitions
-        l_partitions.append({
-            'indices': [n_core_current + key_partition(i) for i in range(firing_graph.Cw.shape[1])],
-            'depth': firing_graph.depth
-        })
-
-        if firing_graph.partitions is not None:
-            l_partitions[-1].update({'partitions': firing_graph.partitions})
-
-        n_core_current += firing_graph.Cw.shape[1]
-
-        # Merge io matrices
-        sax_I = hstack([sax_I, firing_graph.Iw.tolil()])
-        sax_O = vstack([sax_O, firing_graph.Ow.tolil()])
-
-        # Merge Core matrices
-        sax_C_new = hstack([lil_matrix((firing_graph.Cw.shape[0], sax_C.shape[1])), firing_graph.Cw.tolil()])
-        sax_C = hstack([sax_C, lil_matrix((sax_C.shape[0], firing_graph.Cw.shape[1]))])
-        sax_C = vstack([sax_C, sax_C_new])
-
-        # Merge io masks
-        d_masks['Im'] = hstack([d_masks['Im'], firing_graph.Im.tolil()])
-        d_masks['Om'] = vstack([d_masks['Om'], firing_graph.Om.tolil()])
-
-        # Merge Core masks
-        mask_C_new = hstack([lil_matrix((firing_graph.Cm.shape[0], d_masks['Cm'].shape[1])), firing_graph.Cm.tolil()])
-        mask_C = hstack([d_masks['Cm'], lil_matrix((d_masks['Cm'].shape[0], firing_graph.Cm.shape[1]))])
-        d_masks['Cm'] = vstack([mask_C, mask_C_new])
-
-        # Merge levels
-        l_levels.extend(list(firing_graph.levels))
-
-    return FiringGraph.from_matrices(
-        sax_I.tocsc(), sax_C.tocsc(), sax_O.tocsc(), array(l_levels), mask_matrices=d_masks, depth=depth,
-        partitions=l_partitions
-    )
 
 
 def extract_structure(partition, firing_graph):
