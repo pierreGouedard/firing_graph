@@ -324,12 +324,13 @@ class SupervisedSampler(object):
         }
         l_partitions, l_levels = self.firing_graph.partitions, list(self.firing_graph.levels)
 
-        for partitions in firing_graph.partitions:
+        for partition in firing_graph.partitions:
 
             # Set partitions
             l_partitions.append({
-                'indices': [sax_C.shape[0] + i for i in partitions['indices']],
-                'depth': partitions.depth
+                'indices': [sax_C.shape[0] + i for i in partition['indices']],
+                'depth': partition['depth'],
+                'precision': partition['precision']
             })
 
         # Merge io matrices
