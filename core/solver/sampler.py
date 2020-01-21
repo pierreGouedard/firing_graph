@@ -47,6 +47,9 @@ class SupervisedSampler(object):
 
         :return:
         """
+        print("[Sampler]: Generative sampling")
+
+
         # Initialisation
         self.vertices = {i: [] for i in range(self.n_outputs)}
         ax_selected, n = np.zeros(self.n_outputs, dtype=int), 0
@@ -81,6 +84,7 @@ class SupervisedSampler(object):
             if n > self.max_iter:
                 break
 
+        print("[Sampler]: Generative sampling has sampled {} vertices".format(ax_selected.sum()))
         return self
 
     def discriminative_sampling(self):
@@ -129,6 +133,7 @@ class SupervisedSampler(object):
             if n > self.max_iter:
                 break
 
+        print("[Sampler]: Discriminative sampling has sampled {} vertices".format(ax_selected.sum()))
         return self
 
     def build_firing_graph(self, drainer_params, return_structures=False):
@@ -165,6 +170,7 @@ class SupervisedSampler(object):
         :param drainer_params:
         :return:
         """
+
         # Init
         n_core = self.n_vertices + 1
         sax_I, sax_C, ax_levels = lil_matrix((self.n_inputs, n_core)), lil_matrix((n_core, n_core)), np.array([self.l0])

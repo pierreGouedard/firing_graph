@@ -81,10 +81,6 @@ class FiringGraphDrainer(object):
         while j < n:
             self.run_iteration(True, True)
 
-            # Display
-            if j % 100 == 0 and j != 0:
-                print("[Drainer]: {} batch has been completed".format(j))
-
             # Condition of stop that has to be put in the drainer
             if self.firing_graph.Im.nnz == 0 and self.firing_graph.Cm.nnz == 0 and self.firing_graph.Om.nnz == 0:
                 early_stopping = True
