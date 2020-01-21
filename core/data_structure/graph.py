@@ -18,7 +18,8 @@ class FiringGraph(object):
     track of the firing of vertices.
 
     """
-    def __init__(self, project, ax_levels, matrices, depth=2, graph_id=None, is_drained=False, partitions=None):
+    def __init__(self, project, ax_levels, matrices, depth=2, graph_id=None, is_drained=False, partitions=None,
+                 drainer_params=None, precision=None):
 
         if graph_id is None:
             graph_id = ''.join([random.choice(string.ascii_letters) for _ in range(5)])
@@ -32,6 +33,8 @@ class FiringGraph(object):
         self.levels = ax_levels
         self.matrices = matrices
         self.partitions = partitions
+        self.drainer_params = drainer_params if drainer_params is not None else {}
+        self.precision = precision
 
         # Tracking
         self.backward_firing = {
@@ -115,7 +118,7 @@ class FiringGraph(object):
 
     @staticmethod
     def from_matrices(sax_I, sax_C, sax_O, ax_levels, mask_matrices=None, mask_vertices=None, depth=2, project='fg',
-                      graph_id=None, partitions=None):
+                      graph_id=None, partitions=None, drainer_params=None, precision=None):
         """
 
         :param sax_I:
@@ -128,6 +131,7 @@ class FiringGraph(object):
         :param project:
         :param graph_id:
         :param partitions:
+        :param drainer_params:
         :return:
         """
 
@@ -140,7 +144,8 @@ class FiringGraph(object):
         d_matrices = dict(list(mask_matrices.items()) + [('Iw', sax_I), ('Cw', sax_C), ('Ow', sax_O)])
 
         return FiringGraph(
-            project, ax_levels, depth=depth, matrices=d_matrices, graph_id=graph_id, partitions=partitions
+            project, ax_levels, depth=depth, matrices=d_matrices, graph_id=graph_id, partitions=partitions,
+            drainer_params=drainer_params, precision=precision
         )
 
     @staticmethod
@@ -202,30 +207,3 @@ class FiringGraph(object):
 
     def copy(self):
         return self.from_dict(self.to_dict(is_copy=True), self.project, self.graph_id)
-
-
-def extract_structure(partition, firing_graph):
-    """
-
-    :param partition:
-    :param firing_graph:
-    :return:
-    """
-    l_ind_partition = partition['indices']
-
-    sax_I = firing_graph.Iw[:, l_ind_partition]
-    sax_C = firing_graph.Cw[l_ind_partition, :][:, l_ind_partition]
-    sax_O = firing_graph.Ow[l_ind_partition, :]
-
-    d_masks = {
-        'Im': firing_graph.Im[:, l_ind_partition],
-        'Cm': firing_graph.Cm[l_ind_partition, :][:, l_ind_partition],
-        'Om': firing_graph.Om[l_ind_partition, :]
-    }
-
-    ax_levels = firing_graph.levels[l_ind_partition]
-
-    return FiringGraph.from_matrices(
-        sax_I.tocsc(), sax_C.tocsc(), sax_O.tocsc(), ax_levels, mask_matrices=d_masks, depth=partition['depth'],
-        partitions=partition.get('partitions', None)
-    )

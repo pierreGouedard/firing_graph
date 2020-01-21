@@ -131,7 +131,7 @@ class SupervisedSampler(object):
 
         return self
 
-    def build_firing_graph(self, l_weights, return_structures=False):
+    def build_firing_graph(self, drainer_params, return_structures=False):
         """
 
         :return:
@@ -146,10 +146,10 @@ class SupervisedSampler(object):
         l_structures = []
         if self.structures is None:
             for i in range(self.n_outputs):
-                l_structures.append(self.create_structures(i, l_weights[i]))
+                l_structures.append(self.create_structures(i, drainer_params))
         else:
             for i, structure in enumerate(self.structures):
-                l_structures.append(self.augment_structures(i, structure, l_weights[i]))
+                l_structures.append(self.augment_structures(i, structure, drainer_params))
 
         firing_graph = self.merge_structures(l_structures)
 
@@ -158,11 +158,11 @@ class SupervisedSampler(object):
 
         return firing_graph
 
-    def create_structures(self, i, w):
+    def create_structures(self, i, drainer_params):
         """
 
         :param i:
-        :param w:
+        :param drainer_params:
         :return:
         """
         # Init
@@ -177,7 +177,7 @@ class SupervisedSampler(object):
         # Core loop
         for j, l_bits in enumerate(self.vertices[i]):
             for bit in l_bits:
-                sax_I[bit, j] = w
+                sax_I[bit, j] = drainer_params['weight']
                 d_mask['Im'][bit, j] = True
                 sax_C[j, n_core - 1] = 1
 
@@ -186,16 +186,16 @@ class SupervisedSampler(object):
         sax_O[n_core - 1, i] = 1
 
         return FiringGraph.from_matrices(
-            sax_I.tocsc(), sax_C.tocsc(), sax_O.tocsc(), ax_levels, mask_matrices=d_mask, depth=3
+            sax_I.tocsc(), sax_C.tocsc(), sax_O.tocsc(), ax_levels, mask_matrices=d_mask, depth=3,
+            drainer_params=drainer_params
         )
 
-    def augment_structures(self, i, structure, w):
+    def augment_structures(self, i, structure, drainer_params):
         """
 
         :param i:
         :param structure:
-        :param w:
-        :param w_max:
+        :param drainer_params:
         :return:
         """
         # Init
@@ -215,7 +215,7 @@ class SupervisedSampler(object):
         # Core loop
         for j, l_bits in enumerate(self.vertices[i]):
             for bit in l_bits:
-                sax_I[bit, structure.Cw.shape[0] + j] = w
+                sax_I[bit, structure.Cw.shape[0] + j] = drainer_params['weight']
                 sax_C[structure.Cw.shape[0] + j, n_core - 3] = 1
                 sax_C[n_core - 3, n_core - 2] = 1
                 d_mask['Im'][bit, structure.Cw.shape[0] + j] = True
@@ -243,7 +243,8 @@ class SupervisedSampler(object):
         ]
 
         return FiringGraph.from_matrices(
-            sax_I.tocsc(), sax_C.tocsc(), sax_O.tocsc(), ax_levels, mask_matrices=d_mask, depth=5, partitions=partitions
+            sax_I.tocsc(), sax_C.tocsc(), sax_O.tocsc(), ax_levels, mask_matrices=d_mask, depth=5, partitions=partitions,
+            drainer_params=drainer_params, precision=structure.precision
         )
 
     def merge_structures(self, l_structures):
@@ -274,7 +275,10 @@ class SupervisedSampler(object):
     
             if structure.partitions is not None:
                 l_partitions[-1].update({'partitions': structure.partitions})
-    
+
+            if structure.precision is not None:
+                l_partitions[-1].update({'precision': structure.precision})
+
             n_core_current += structure.Cw.shape[1]
     
             # Merge io matrices

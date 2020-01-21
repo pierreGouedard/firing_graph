@@ -41,7 +41,7 @@ class TestDrainer(unittest.TestCase):
         imputer = create_imputer(csc_matrix(ax_input), csc_matrix(ax_output))
 
         # Create drainer
-        drainer = FiringGraphDrainer(self.t_mask, 1, 1, 1, self.ap2_fg, imputer, verbose=1)
+        drainer = FiringGraphDrainer(self.ap2_fg, imputer, t=self.t_mask, p=1, q=1, batch_size=1, verbose=1)
         drainer.drain(100)
 
         # Get matrice of the graph
@@ -65,7 +65,7 @@ class TestDrainer(unittest.TestCase):
         imputer = create_imputer(csc_matrix(ax_input), csc_matrix(ax_output))
 
         # Create drainer
-        drainer = FiringGraphDrainer(1000, 1, 1, 10, self.ap2_fg, imputer, verbose=1)
+        drainer = FiringGraphDrainer(self.ap2_fg, imputer, t=1000, p=1, q=1, batch_size=10, verbose=1)
         drainer.drain(n=self.n)
 
         # Get Data and assert result is as expected
@@ -104,7 +104,7 @@ class TestDrainer(unittest.TestCase):
         imputer = create_imputer(csc_matrix(ax_input), csc_matrix(ax_output))
 
         # Create drainer
-        drainer = FiringGraphDrainer(1000, 1, 1, 1, self.ap3_fg, imputer, verbose=1)
+        drainer = FiringGraphDrainer(self.ap3_fg, imputer, t=1000, p=1, q=1, batch_size=1, verbose=1)
         drainer.drain(n=self.n * 10)
 
         # Get Data and assert result is as expected
@@ -149,12 +149,12 @@ class TestDrainer(unittest.TestCase):
         imputer = create_imputer(csc_matrix(ax_input), csc_matrix(ax_output))
 
         # Drain with batch size of 2
-        drainer_2 = FiringGraphDrainer(1000, 1, 1, 2, self.ap2_fg.copy(), imputer, verbose=1)
+        drainer_2 = FiringGraphDrainer(self.ap2_fg.copy(), imputer, t=1000, p=1, q=1, batch_size=2, verbose=1)
         drainer_2.drain(n=200)
 
         # Drain with batch size of 1
         imputer.stream_features()
-        drainer_1 = FiringGraphDrainer(1000, 1, 1, 1, self.ap2_fg.copy(), imputer, verbose=1)
+        drainer_1 = FiringGraphDrainer(self.ap2_fg.copy(), imputer, t=1000, p=1, q=1, batch_size=1, verbose=1)
         drainer_1.drain(n=400)
 
         # There should be no more difference between edges weight than difference of batch size
@@ -163,7 +163,7 @@ class TestDrainer(unittest.TestCase):
 
         # Drain with manual iteration management
         imputer.stream_features()
-        drainer_1m = FiringGraphDrainer(1000, 1, 1, 1, self.ap2_fg.copy(), imputer, verbose=1)
+        drainer_1m = FiringGraphDrainer(self.ap2_fg.copy(), imputer, t=1000, p=1, q=1, batch_size=1, verbose=1)
         for _ in range(400):
             drainer_1m.drain()
             drainer_1m.reset_all()
@@ -183,12 +183,12 @@ class TestDrainer(unittest.TestCase):
         imputer = create_imputer(csc_matrix(ax_input), csc_matrix(ax_output))
 
         # Drain with batch size of 2
-        drainer_2 = FiringGraphDrainer(1000, 1, 1, 2, self.ap3_fg.copy(), imputer, verbose=1)
+        drainer_2 = FiringGraphDrainer(self.ap3_fg.copy(), imputer, t=1000, p=1, q=1, batch_size=2, verbose=1)
         drainer_2.drain(n=100)
 
         # Drain with batch size of 1
         imputer.stream_features()
-        drainer_1 = FiringGraphDrainer(1000, 1, 1, 1, self.ap3_fg.copy(), imputer, verbose=1)
+        drainer_1 = FiringGraphDrainer(self.ap3_fg.copy(), imputer, t=1000, p=1, q=1, batch_size=1, verbose=1)
         drainer_1.drain(n=200)
 
         # There should be no more difference between edges weight than difference of batch size
@@ -197,7 +197,7 @@ class TestDrainer(unittest.TestCase):
 
         # Drain with manual iteration management
         imputer.stream_features()
-        drainer_1m = FiringGraphDrainer(1000, 1, 1, 1, self.ap3_fg.copy(), imputer, verbose=1)
+        drainer_1m = FiringGraphDrainer(self.ap3_fg.copy(), imputer, t=1000, p=1, q=1, batch_size=1, verbose=1)
         for _ in range(200):
             drainer_1m.drain()
             drainer_1m.reset_all()

@@ -9,12 +9,18 @@ from ..tools.equations.structure import buc, buo, bui
 
 
 class FiringGraphDrainer(object):
-    def __init__(self, t, p, q, batch_size, firing_graph, imputer, verbose=0):
+    def __init__(self, firing_graph, imputer, p=None, q=None, t=None, batch_size=None, verbose=0):
+
+        # Assert that draining parameters are available
+        assert firing_graph.drainer_params.get('p', p) is not None, "parameter p of drainer is None"
+        assert firing_graph.drainer_params.get('q', p) is not None, "parameter q of drainer is None"
+        assert firing_graph.drainer_params.get('t', p) is not None, "parameter t of drainer is None"
+        assert firing_graph.drainer_params.get('batch_size', p) is not None, "parameter batch_size of drainer is None"
 
         # Core params
-        self.p, self.q = p, q
-        self.t = t
-        self.bs = batch_size
+        self.p, self.q = firing_graph.drainer_params.get('p', p), firing_graph.drainer_params.get('q', q)
+        self.t = firing_graph.drainer_params.get('t', t)
+        self.bs = firing_graph.drainer_params.get('batch_size', batch_size)
         self.firing_graph = firing_graph
         self.verbose = verbose
 

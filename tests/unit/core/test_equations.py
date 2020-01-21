@@ -64,15 +64,15 @@ class TestEquations(unittest.TestCase):
 
         # Create firing graphs
         self.fga = FiringGraph.from_matrices(
-            'test_equation_a', self.sax_I, self.sax_C, self.sax_O, self.levels,  mask_vertices=self.mask_vertice_drain_a
+            self.sax_I, self.sax_C, self.sax_O, self.levels,  mask_vertices=self.mask_vertice_drain_a
         )
 
         self.fgb = FiringGraph.from_matrices(
-            'test_equation_b', self.sax_I, self.sax_C, self.sax_O, self.levels,  mask_vertices=self.mask_vertice_drain_b
+            self.sax_I, self.sax_C, self.sax_O, self.levels,  mask_vertices=self.mask_vertice_drain_b
         )
 
         self.fgc = FiringGraph.from_matrices(
-            'test_equation_c', self.sax_I, self.sax_C, self.sax_O, self.levels,  mask_vertices=self.mask_vertice_drain_c
+            self.sax_I, self.sax_C, self.sax_O, self.levels,  mask_vertices=self.mask_vertice_drain_c
         )
 
         # Create test signals
@@ -88,7 +88,7 @@ class TestEquations(unittest.TestCase):
 
         # Create imputers and drainer
         imputer = init_imputer(self.input, self.output)
-        drainer = FiringGraphDrainer(100, self.p, self.q, self.batch_size, self.fga, imputer)
+        drainer = FiringGraphDrainer(self.fga, imputer, t=100, p=self.p, q=self.q, batch_size=self.batch_size)
 
         # Run for Two iteration and check forward signals are as expected
         drainer.run_iteration(True, False)
@@ -106,7 +106,7 @@ class TestEquations(unittest.TestCase):
         """
         # Create imputers and drainer
         imputer = init_imputer(self.input, self.output)
-        drainer = FiringGraphDrainer(100, self.p, self.q, self.batch_size, self.fga, imputer)
+        drainer = FiringGraphDrainer(self.fga, imputer, t=100, p=self.p, q=self.q, batch_size=self.batch_size)
 
         # Run for Two iteration and check backward signals are as expected
         drainer.run_iteration(True, True)
@@ -161,7 +161,7 @@ class TestEquations(unittest.TestCase):
         """
         # Create imputers and drainer
         imputer = init_imputer(self.input, self.output)
-        drainer = FiringGraphDrainer(100, self.p, self.q, self.batch_size, self.fgb, imputer)
+        drainer = FiringGraphDrainer(self.fgb, imputer, t=100, p=self.p, q=self.q, batch_size=self.batch_size)
 
         # Run for 1 epoch and check backward signals are as expected
         drainer.drain(1)
@@ -178,7 +178,7 @@ class TestEquations(unittest.TestCase):
 
         # Create imputers and drainer
         imputer = init_imputer(self.input, self.output)
-        drainer = FiringGraphDrainer(100, self.p, self.q, self.batch_size, self.fgc, imputer)
+        drainer = FiringGraphDrainer(self.fgc, imputer, t=100, p=self.p, q=self.q, batch_size=self.batch_size)
 
         # Run for 1 epoch and check backward signals are as expected
         drainer.drain(1)
