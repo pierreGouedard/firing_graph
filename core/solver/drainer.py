@@ -65,7 +65,7 @@ class FiringGraphDrainer(object):
             # Stop conditions
             if self.firing_graph.Im.nnz == 0 and self.firing_graph.Cm.nnz == 0 and self.firing_graph.Om.nnz == 0:
                 stop = True
-            print(self.firing_graph.I.nnz)
+
             if t > t_max:
                 stop = True
 
