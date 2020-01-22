@@ -69,7 +69,7 @@ class FiringGraphDrainer(object):
             if t > t_max:
                 stop = True
 
-            t += self.bs
+            t += max_batch_size
             print("[Drainer]: {} iterations has been completed".format(t))
 
             # Adapt batch size if specified
