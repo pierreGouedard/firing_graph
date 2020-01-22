@@ -156,7 +156,7 @@ class SupervisedSampler(object):
             for i, structure in enumerate(self.structures):
                 l_structures.append(self.augment_structures(i, structure, drainer_params))
 
-        firing_graph = self.merge_structures(l_structures)
+        firing_graph = self.merge_structures(l_structures, drainer_params)
 
         if return_structures:
             return firing_graph, l_structures
@@ -193,7 +193,6 @@ class SupervisedSampler(object):
 
         return FiringGraph.from_matrices(
             sax_I.tocsc(), sax_C.tocsc(), sax_O.tocsc(), ax_levels, mask_matrices=d_mask, depth=3,
-            drainer_params=drainer_params
         )
 
     def augment_structures(self, i, structure, drainer_params):
@@ -250,10 +249,10 @@ class SupervisedSampler(object):
 
         return FiringGraph.from_matrices(
             sax_I.tocsc(), sax_C.tocsc(), sax_O.tocsc(), ax_levels, mask_matrices=d_mask, depth=5, partitions=partitions,
-            drainer_params=drainer_params, precision=structure.precision
+            precision=structure.precision
         )
 
-    def merge_structures(self, l_structures):
+    def merge_structures(self, l_structures, drainer_params):
         """
     
         :param l_structures:
@@ -310,7 +309,7 @@ class SupervisedSampler(object):
     
         return FiringGraph.from_matrices(
             sax_I.tocsc(), sax_C.tocsc(), sax_O.tocsc(), np.array(l_levels), mask_matrices=d_masks, depth=depth,
-            partitions=l_partitions
+            partitions=l_partitions, drainer_params=drainer_params
         )
 
     def merge_firing_graph(self, firing_graph):
