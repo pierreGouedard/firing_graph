@@ -173,7 +173,9 @@ class SupervisedSampler(object):
 
         # Init
         n_core = self.n_vertices + 1
-        sax_I, sax_C, ax_levels = lil_matrix((self.n_inputs, n_core)), lil_matrix((n_core, n_core)), np.array([self.l0])
+        sax_I, sax_C = lil_matrix((self.n_inputs, n_core)), lil_matrix((n_core, n_core))
+        ax_levels = np.array([self.l0] * self.n_vertices)
+
         d_mask = {
             'Im': lil_matrix((self.n_inputs, n_core), dtype=bool),
             'Cm': lil_matrix((n_core, n_core), dtype=bool),
