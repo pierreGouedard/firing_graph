@@ -70,7 +70,7 @@ class FiringGraphDrainer(object):
                 stop = True
 
             t += self.bs
-            print("[Drainer]: {} iterations has been completed".format(j * self.bs))
+            print("[Drainer]: {} iterations has been completed".format(t * self.bs))
 
             # Adapt batch size if specified
             if adapt_bs:
