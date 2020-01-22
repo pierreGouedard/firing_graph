@@ -73,7 +73,7 @@ class FiringGraphDrainer(object):
             print("[Drainer]: {} iterations has been completed".format(t))
 
             # Adapt batch size if specified
-            if adapt_bs:
+            if adapt_bs and not stop:
                 self.adapt_batch_size(max_batch_size)
 
         return self
@@ -131,7 +131,7 @@ class FiringGraphDrainer(object):
             l_batch_size += [max(min(self.t - sax_bfc.tocsc().max(), max_batch_size), 1)]
 
         # With Input matrix
-        if self.firing_graph.Cm.nnz > 0:
+        if self.firing_graph.Im.nnz > 0:
             sax_bfi = self.firing_graph.backward_firing['i'].multiply(self.firing_graph.Im)
             l_batch_size += [max(min(self.t - sax_bfi.tocsc().max(), max_batch_size), 1)]
 
