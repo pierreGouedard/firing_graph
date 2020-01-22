@@ -28,9 +28,9 @@ class FiringGraphDrainer(object):
         self.imputer = imputer
 
         # Init signals
-        self.sax_i, self.sax_c, self.sax_o = init_forward_signal(self.firing_graph, batch_size)
-        self.sax_im, self.sax_cm = init_forward_memory(self.firing_graph, batch_size)
-        self.sax_cb, self.sax_ob = init_backward_signal(self.firing_graph, batch_size)
+        self.sax_i, self.sax_c, self.sax_o = init_forward_signal(self.firing_graph, self.bs)
+        self.sax_im, self.sax_cm = init_forward_memory(self.firing_graph, self.bs)
+        self.sax_cb, self.sax_ob = init_backward_signal(self.firing_graph, self.bs)
         self.iter = 0
 
     def reset_all(self, imputer=False):
