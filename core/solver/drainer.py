@@ -75,6 +75,7 @@ class FiringGraphDrainer(object):
             # Adapt batch size if specified
             if adapt_bs and not stop:
                 self.adapt_batch_size(max_batch_size)
+                self.reset_all()
 
         return self
 
