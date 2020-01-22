@@ -13,9 +13,10 @@ class FiringGraphDrainer(object):
 
         # Assert that draining parameters are available
         assert firing_graph.drainer_params.get('p', p) is not None, "parameter p of drainer is None"
-        assert firing_graph.drainer_params.get('q', p) is not None, "parameter q of drainer is None"
-        assert firing_graph.drainer_params.get('t', p) is not None, "parameter t of drainer is None"
-        assert firing_graph.drainer_params.get('batch_size', p) is not None, "parameter batch_size of drainer is None"
+        assert firing_graph.drainer_params.get('q', q) is not None, "parameter q of drainer is None"
+        assert firing_graph.drainer_params.get('t', t) is not None, "parameter t of drainer is None"
+        assert firing_graph.drainer_params.get('batch_size', batch_size) is not None, \
+            "parameter batch_size of drainer is None"
 
         # Core params
         self.p, self.q = firing_graph.drainer_params.get('p', p), firing_graph.drainer_params.get('q', q)
@@ -68,7 +69,7 @@ class FiringGraphDrainer(object):
             if t > t_max:
                 stop = True
 
-            j += self.bs
+            t += self.bs
             print("[Drainer]: {} iterations has been completed".format(j * self.bs))
 
             # Adapt batch size if specified
