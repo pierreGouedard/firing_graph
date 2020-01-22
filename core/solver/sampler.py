@@ -233,13 +233,14 @@ class SupervisedSampler(object):
 
         # Set outputs
         sax_O = lil_matrix((n_core, self.n_outputs))
-        sax_O[n_core - 1, int(structure.Ow.nonzero()[1])] = 1
+        sax_O[n_core - 1, int(structure.Ow.nonzero()[1][0])] = 1
 
         # Set partitions
         partitions = [
             {
                 'indices': range(structure.Cw.shape[1]),
                 'name': "base",
+                'precision': structure.precision,
                 "depth": 4
             },
             {
