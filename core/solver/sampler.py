@@ -355,7 +355,7 @@ class SupervisedSampler(object):
         # Merge levels
         l_levels.extend(list(firing_graph.levels))
 
-        return FiringGraph.from_matrices(
+        self.firing_graph = FiringGraph.from_matrices(
             sax_I, sax_C, sax_O, np.array(l_levels), mask_matrices=d_masks, depth=self.firing_graph.depth,
             partitions=l_partitions
         )

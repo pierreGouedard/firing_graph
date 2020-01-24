@@ -66,11 +66,11 @@ class FiringGraphDrainer(object):
             if self.firing_graph.Im.nnz == 0 and self.firing_graph.Cm.nnz == 0 and self.firing_graph.Om.nnz == 0:
                 stop = True
 
-            if t > t_max:
-                stop = True
-
             t += max_batch_size
             print("[Drainer]: {} iterations has been completed".format(t))
+
+            if t >= t_max:
+                stop = True
 
             # Adapt batch size if specified
             if adapt_bs and not stop:
