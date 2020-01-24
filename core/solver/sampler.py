@@ -187,7 +187,8 @@ class SupervisedSampler(object):
             for bit in l_bits:
                 sax_I[bit, j] = drainer_params['weight']
                 d_mask['Im'][bit, j] = True
-                sax_C[j, n_core - 1] = 1
+
+            sax_C[j, n_core - 1] = 1
 
         # Set Output connection and level
         sax_O = lil_matrix((n_core, self.n_outputs))
@@ -223,9 +224,10 @@ class SupervisedSampler(object):
         for j, l_bits in enumerate(self.vertices[i]):
             for bit in l_bits:
                 sax_I[bit, structure.Cw.shape[0] + j] = drainer_params['weight']
-                sax_C[structure.Cw.shape[0] + j, n_core - 3] = 1
-                sax_C[n_core - 3, n_core - 2] = 1
                 d_mask['Im'][bit, structure.Cw.shape[0] + j] = True
+
+            sax_C[structure.Cw.shape[0] + j, n_core - 3] = 1
+            sax_C[n_core - 3, n_core - 2] = 1
 
         # Add core edges
         sax_C[structure.Cw.shape[0] - 1, n_core - 1] = 1
