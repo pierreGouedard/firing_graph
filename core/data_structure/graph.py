@@ -177,7 +177,7 @@ class FiringGraph(object):
         for i in range(self.depth - 1):
 
             # Core transmit
-            sax_c = ftc(self.C, self.I, sax_c, sax_i)
+            sax_c = ftc(self.C, self.I, sax_c, sax_i.astype(int))
             sax_c = fpc(sax_c, None, self.levels)
 
             if i == 0:
