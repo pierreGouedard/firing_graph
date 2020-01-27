@@ -1,5 +1,6 @@
 # Global imports
 import pickle
+from scipy.sparse import csc_matrix
 
 # Local imports
 
@@ -55,9 +56,14 @@ class ArrayImputer(object):
         self.sax_forward = sax_forward
         self.sax_backward = sax_backward
         self.is_cyclic = is_cyclic
+        self.backward_flip = False
 
         # Define streaming features
         self.step, self.orient, self.step_forward, self.step_backward = None, orient, None, None
+
+    def set_backward_flip(self, backward_flip):
+        self.backward_flip = backward_flip
+        return self
 
     def stream_features(self):
         self.step_forward, self.step_backward = 0, 0
@@ -113,6 +119,9 @@ class ArrayImputer(object):
 
             if self.is_cyclic:
                 self.step_backward = self.step_backward % self.sax_backward.shape[-1]
+
+        if self.backward_flip:
+            sax_next = csc_matrix(~sax_next.toarray())
 
         return sax_next
 
