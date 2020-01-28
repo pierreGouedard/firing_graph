@@ -68,7 +68,7 @@ class ArrayImputer(object):
     def stream_features(self):
         self.step_forward, self.step_backward = 0, 0
 
-    def next_forward(self):
+    def next_forward(self,):
         if self.orient == 'row':
 
             if self.step_forward < self.sax_forward.shape[0]:
