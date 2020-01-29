@@ -41,62 +41,16 @@ class SupervisedSampler(object):
         self.vertices = None
         self.imputer = imputer
 
-    def generative_sampling(self):
-        """
-        Sampling to create first Structure.
-
-        :return:
-        """
-        print("[Sampler]: Generative sampling")
-
-        # Initialisation
-        self.vertices = {i: [] for i in range(self.n_outputs)}
-        ax_selected, n = np.zeros(self.n_outputs, dtype=int), 0
-
-        # Core loop
-        while ax_selected.sum() != len(ax_selected) * self.n_vertices:
-
-            # Get forward and backward signals
-            sax_i = self.imputer.next_forward()
-            sax_got = self.imputer.next_backward()
-
-            # Propagate through firing graph
-            if self.firing_graph is not None:
-                sax_o = self.firing_graph.propagate(sax_i)
-            else:
-                sax_o = csc_matrix((1, self.n_outputs))
-
-            for i in sax_got.nonzero()[1]:
-                if ax_selected[i] < self.n_vertices and sax_o[0, i] == 0:
-
-                    # Randomly sample active bits
-                    ax_indices = np.array(sax_i.nonzero()[1])
-                    ax_mask = np.random.binomial(1, self.p_sample, len(ax_indices))
-
-                    # Add sampled bits to list of output i's vertices
-                    if ax_mask.any():
-                        self.vertices[i].extend([set(ax_indices[ax_mask > 0])])
-                        ax_selected[i] += 1
-
-            n += 1
-
-            if n > self.max_iter:
-                break
-
-        print("[Sampler]: Generative sampling has sampled {} vertices".format(ax_selected.sum()))
-        return self
-
     def get_signal_batch(self):
-        sax_i, sax_o = csr_matrix((0, self.n_inputs)), csr_matrix((0, self.n_outputs))
+        sax_i, sax_o = csr_matrix((0, self.n_inputs), dtype=bool), csr_matrix((0, self.n_outputs), dtype=bool)
 
         for _ in range(self.batch_size):
-            sax_i = vstack([sax_i, self.imputer.next_forward().toarray()])
-            sax_o = vstack([sax_o, self.imputer.next_backward().toarray()])
+            sax_i = vstack([sax_i, self.imputer.next_forward().tocsr()])
+            sax_o = vstack([sax_o, self.imputer.next_backward().tocsr()])
 
         return sax_i, sax_o
 
-
-    def generative_sampling_new(self):
+    def generative_sampling(self):
 
         # Init
         self.vertices = {i: [] for i in range(self.n_outputs)}
@@ -108,10 +62,10 @@ class SupervisedSampler(object):
             if self.firing_graph is not None:
                 sax_fg = self.firing_graph.propagate(sax_i)[:, i]
             else:
-                sax_fg = csc_matrix((self.batch_size, 1))
+                sax_fg = csc_matrix((self.batch_size, 1), dtype=bool)
 
             # selected random active
-            ax_mask = sax_fg.multiply(sax_got[:, i]).toarray()[:, 0]
+            ax_mask = sax_got[:, i].toarray()[:, 0] & ~(sax_fg.toarray()[:, 0])
             n_sample = min(ax_mask.sum(), self.n_vertices)
 
             if n_sample == 0:
@@ -133,7 +87,7 @@ class SupervisedSampler(object):
 
         return self
 
-    def discriminative_sampling_new(self):
+    def discriminative_sampling(self):
         # Init
         self.vertices = {i: [] for i in range(len(self.structures))}
         ax_selected, n = np.zeros(len(self.structures), dtype=int), 0
@@ -144,7 +98,7 @@ class SupervisedSampler(object):
             if self.firing_graph is not None:
                 sax_fg = self.firing_graph.propagate(sax_i)[:, i]
             else:
-                sax_fg = csc_matrix((self.batch_size, 1))
+                sax_fg = csc_matrix((self.batch_size, 1), dtype=bool)
 
             l_structures_sub = [(j, struct) for j, struct in enumerate(self.structures) if i in struct.O.nonzero()[1]]
 
@@ -154,7 +108,7 @@ class SupervisedSampler(object):
                 sax_struct = struct.propagate(sax_i)[:, i]
 
                 # selected random active
-                ax_mask = sax_struct.multiply(sax_fg).multiply(sax_got[:, i]).toarray()[:, 0]
+                ax_mask = sax_struct.multiply(sax_got[:, i]).toarray()[:, 0] & ~(sax_fg.toarray()[:, 0])
                 n_sample = min(ax_mask.sum(), self.n_vertices)
 
                 if n_sample == 0:
@@ -171,56 +125,6 @@ class SupervisedSampler(object):
                     if ax_mask.any():
                         self.vertices[j].extend([set(ax_indices[ax_mask > 0])])
                         ax_selected[j] += 1
-
-        print("[Sampler]: Discriminative sampling has sampled {} vertices".format(ax_selected.sum()))
-
-        return self
-
-    def discriminative_sampling(self):
-        """
-        Sampling to complete Structure.
-
-        :return:
-        """
-        # Init
-        self.vertices = {i: [] for i in range(len(self.structures))}
-        ax_selected, n = np.zeros(len(self.structures), dtype=int), 0
-
-        # Core loop
-        while ax_selected.sum() != len(ax_selected) * self.n_vertices:
-
-            # Get forward and backward signals
-            sax_i = self.imputer.next_forward()
-            sax_got = self.imputer.next_backward()
-
-            # Propagate through firing graph
-            if self.firing_graph is not None:
-                sax_o = self.firing_graph.propagate(sax_i)
-            else:
-                sax_o = csc_matrix((1, self.n_outputs))
-
-            # For each output and each structure, sample active bits
-            for i in sax_got.nonzero()[1]:
-                for j, structure in enumerate(self.structures):
-
-                    if i not in structure.O.sum(axis=0).nonzero()[1]:
-                        continue
-
-                    l_struct_indices = list(structure.I.nonzero()[0])
-
-                    if ax_selected[j] < self.n_vertices and structure.propagate(sax_i)[0, i] > 0 and sax_o[0, i] == 0:
-                        ax_indices = np.array([ind for ind in sax_i.nonzero()[1] if ind not in l_struct_indices])
-                        ax_mask = np.random.binomial(1, self.p_sample, len(ax_indices))
-
-                        # Add sampled bits to list of output i vertices
-                        if ax_mask.any():
-                            self.vertices[j].extend([set(ax_indices[ax_mask > 0])])
-                            ax_selected[j] += 1
-
-            n += 1
-
-            if n > self.max_iter:
-                break
 
         print("[Sampler]: Discriminative sampling has sampled {} vertices".format(ax_selected.sum()))
 
@@ -284,8 +188,21 @@ class SupervisedSampler(object):
         sax_O = lil_matrix((n_core, self.n_outputs))
         sax_O[n_core - 1, i] = 1
 
+        partitions = [
+            {
+                'indices': [],
+                'name': "base",
+                "depth": 4
+            },
+            {
+                'indices': range(sax_C.shape[0]),
+                "name": "transient",
+                "depth": 3
+            },
+        ]
+
         return FiringGraph.from_matrices(
-            sax_I.tocsc(), sax_C.tocsc(), sax_O.tocsc(), ax_levels, mask_matrices=d_mask, depth=3,
+            sax_I.tocsc(), sax_C.tocsc(), sax_O.tocsc(), ax_levels, mask_matrices=d_mask, depth=3, partitions=partitions
         )
 
     def augment_structures(self, i, structure, drainer_params):
@@ -371,6 +288,7 @@ class SupervisedSampler(object):
             l_partitions.append({
                 'indices': [n_core_current + i for i in range(structure.Cw.shape[1])],
                 'depth': structure.depth,
+                'output': structure.Ow.nonzero()[1][0]
             })
     
             if structure.partitions is not None:

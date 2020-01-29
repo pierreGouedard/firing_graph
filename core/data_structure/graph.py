@@ -185,7 +185,7 @@ class FiringGraph(object):
 
         sax_o = fto(self.O, sax_c)
 
-        return sax_o
+        return sax_o > 0
 
     def save_as_pickle(self, path):
         d_graph = self.to_dict()
