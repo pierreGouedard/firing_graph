@@ -5,7 +5,7 @@ import numpy as np
 # Local import
 from ..tools.equations.backward import bpo, bpc, btc
 from ..tools.equations.forward import fti, ftc, fto, fpi, fpc, fpo
-from ..tools.equations.structure import buc, buo, bui
+from ..tools.equations.graph import buc, buo, bui
 
 
 class FiringGraphDrainer(object):
