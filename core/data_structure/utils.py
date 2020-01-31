@@ -106,6 +106,21 @@ def gather_matrices(ax_in, ax_core, ax_out):
     return ax_fg
 
 
+def reduce_backward_firing(d_backward_firing, l_indices):
+    return {
+        'i': d_backward_firing['i'][:, l_indices], 'o': d_backward_firing['o'][l_indices, :],
+        'c': d_backward_firing['c'][l_indices, :][:, l_indices]
+    }
+
+
+def create_empty_backward_firing(n_inputs, n_outputs, n_core):
+    return {
+        'i': lil_matrix((n_inputs, n_core)),
+        'c': lil_matrix((n_core, n_core)),
+        'o': lil_matrix((n_core, n_outputs)),
+    }
+
+
 def create_empty_matrices(n_inputs, n_outputs, n_core):
 
     return {
@@ -118,27 +133,36 @@ def create_empty_matrices(n_inputs, n_outputs, n_core):
     }
 
 
+def reduce_matrices(d_matrices, l_indices):
+
+    return {
+        'Iw': d_matrices['Iw'][:, l_indices], 'Im': d_matrices['Im'][:, l_indices],
+        'Ow': d_matrices['Ow'][l_indices, :], 'Om': d_matrices['Om'][l_indices, :],
+        'Cw': d_matrices['Cw'][l_indices, :][:, l_indices], 'Cm': d_matrices['Cm'][l_indices, :][:, l_indices]
+    }
+
+
 def augment_matrices(d_matrices_a, d_matrices_b):
 
+    # make sure dimension match
     assert d_matrices_a['Iw'].shape[0] == d_matrices_b['Iw'].shape[0], "shape of inputs matrices doesn't match"
-    assert d_matrices_a['Ow'].shape[1] == d_matrices_b['Ow'].shape[0], "shape of outputs matrices doesn't match"
-
-    # Merge io matrices
-    d_matrices_a['Iw'] = hstack([d_matrices_a['Iw'], d_matrices_b['Iw']])
-    d_matrices_a['Im'] = hstack([d_matrices_a['Im'], d_matrices_b['Im']])
-    d_matrices_a['Ow'] = vstack([d_matrices_a['Ow'], d_matrices_b['Ow']])
-    d_matrices_a['Om'] = vstack([d_matrices_a['Om'], d_matrices_b['Om']])
+    assert d_matrices_a['Ow'].shape[1] == d_matrices_b['Ow'].shape[1], "shape of outputs matrices doesn't match"
 
     # Merge Core matrices
     sax_Cw_upper = hstack([d_matrices_a['Cw'], lil_matrix((d_matrices_a['Cw'].shape[0], d_matrices_b['Cw'].shape[1]))])
     sax_Cw_lower = hstack([lil_matrix((d_matrices_b['Cw'].shape[0], d_matrices_a['Cw'].shape[0])), d_matrices_b['Cw']])
-    d_matrices_a['Cw'] = vstack([sax_Cw_upper, sax_Cw_lower])
 
     sax_Cm_upper = hstack([d_matrices_a['Cm'], lil_matrix((d_matrices_a['Cm'].shape[0], d_matrices_b['Cm'].shape[1]))])
     sax_Cm_lower = hstack([lil_matrix((d_matrices_b['Cm'].shape[0], d_matrices_a['Cm'].shape[0])), d_matrices_b['Cm']])
-    d_matrices_a['Cm'] = vstack([sax_Cm_upper, sax_Cm_lower])
 
-    return d_matrices_a
+    return {
+        'Iw': hstack([d_matrices_a['Iw'], d_matrices_b['Iw']]).tocsc(),
+        'Im': hstack([d_matrices_a['Im'], d_matrices_b['Im']]).tolil(),
+        'Ow': vstack([d_matrices_a['Ow'], d_matrices_b['Ow']]).tocsc(),
+        'Om': vstack([d_matrices_a['Om'], d_matrices_b['Om']]).tolil(),
+        'Cw': vstack([sax_Cw_upper, sax_Cw_lower]).tocsc(),
+        'Cm': vstack([sax_Cm_upper, sax_Cm_lower]).tolil()
+    }
 
 
 def add_core_vertices(d_matrices, n_core, offset):
@@ -146,18 +170,15 @@ def add_core_vertices(d_matrices, n_core, offset):
     # Get I/O dimensions
     n_inputs, n_outputs = d_matrices['Iw'].shape[0], d_matrices['Ow'].shape[1]
 
-    # Update input matrices
-    d_matrices['Iw'] = hstack([d_matrices['Iw'][:, :offset], lil_matrix((n_inputs, n_core))])
-    d_matrices['Im'] = hstack([d_matrices['Im'][:, :offset], lil_matrix((n_inputs, n_core))])
-
     # Update core matrices
-    d_matrices['Cw'] = hstack([d_matrices['Cw'][:, :offset], lil_matrix((n_core, n_core))])
-    d_matrices['Cw'] = vstack([d_matrices['Cw'][:, :offset], lil_matrix((n_core, d_matrices['Cw'].shape[1]))])
-    d_matrices['Cm'] = hstack([d_matrices['Cm'][:, :offset], lil_matrix((n_core, n_core))])
-    d_matrices['Cm'] = vstack([d_matrices['Cm'][:, :offset], lil_matrix((n_core, d_matrices['Cw'].shape[1]))])
+    sax_Cw_upper= hstack([d_matrices['Cw'][:offset, :offset], lil_matrix((offset, n_core))])
+    sax_Cm_upper = hstack([d_matrices['Cm'][:offset, :offset], lil_matrix((offset, n_core))])
 
-    # Update output matrices
-    d_matrices['Ow'] = vstack([d_matrices['Ow'][:, :offset], lil_matrix((n_core, n_outputs))])
-    d_matrices['Om'] = vstack([d_matrices['Om'][:, :offset], lil_matrix((n_core, n_outputs))])
-
-    return d_matrices
+    return {
+        'Iw': hstack([d_matrices['Iw'][:, :offset], lil_matrix((n_inputs, n_core))]).tocsc(),
+        'Im': hstack([d_matrices['Im'][:, :offset], lil_matrix((n_inputs, n_core))]).tolil(),
+        'Ow': vstack([d_matrices['Ow'][:, :offset], lil_matrix((n_core, n_outputs))]).tocsc(),
+        'Om': vstack([d_matrices['Om'][:, :offset], lil_matrix((n_core, n_outputs))]).tolil(),
+        'Cw': vstack([sax_Cw_upper, lil_matrix((n_core, sax_Cw_upper.shape[1]))]).tocsc(),
+        'Cm': vstack([sax_Cm_upper, lil_matrix((n_core, sax_Cm_upper.shape[1]))]).tolil()
+    }

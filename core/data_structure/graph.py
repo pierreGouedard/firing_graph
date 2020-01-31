@@ -19,11 +19,12 @@ class FiringGraph(object):
 
     """
     def __init__(self, project, ax_levels, matrices, depth=2, graph_id=None, is_drained=False, partitions=None,
-                 drainer_params=None, precision=None):
+                 drainer_params=None, precision=None, backward_firing=None):
 
         if graph_id is None:
             graph_id = ''.join([random.choice(string.ascii_letters) for _ in range(5)])
 
+        # Utils
         self.project = project
         self.graph_id = graph_id
         self.is_drained = is_drained
@@ -37,10 +38,12 @@ class FiringGraph(object):
         self.precision = precision
 
         # Tracking
-        self.backward_firing = {
-            'i': lil_matrix(matrices['Iw'].shape), 'c': lil_matrix(matrices['Cw'].shape),
-            'o': lil_matrix(matrices['Ow'].shape),
-        }
+        if backward_firing is None:
+            self.backward_firing = utils.create_empty_backward_firing(
+                matrices['Iw'].shape[0], matrices['Ow'].shape[1], matrices['Cw'].shape[0]
+            )
+        else:
+            self.backward_firing = backward_firing
 
     @property
     def C(self):
@@ -109,12 +112,12 @@ class FiringGraph(object):
         return sax_mask
 
     @staticmethod
-    def load_pickle(path, project, graph_id=None):
+    def load_pickle(path):
 
         with open(path, 'rb') as handle:
             d_graph = pickle.load(handle)
 
-        return FiringGraph.from_dict(d_graph, project, graph_id=graph_id)
+        return FiringGraph.from_dict(d_graph)
 
     @staticmethod
     def from_matrices(sax_I, sax_C, sax_O, ax_levels, mask_matrices=None, mask_vertices=None, depth=2, project='fg',
@@ -149,20 +152,13 @@ class FiringGraph(object):
         )
 
     @staticmethod
-    def from_dict(d_graph, project, graph_id=None):
+    def from_dict(d_graph):
         """
 
         :param d_graph:
-        :param project:
-        :param graph_id:
         :return:
         """
-        fg = FiringGraph(
-            project, d_graph['levels'], matrices=d_graph['matrices'], graph_id=graph_id,
-            is_drained=d_graph['is_drained'], depth=d_graph['depth']
-        )
-
-        return fg
+        return FiringGraph(**d_graph)
 
     def propagate(self, sax_i):
         """
@@ -193,17 +189,23 @@ class FiringGraph(object):
         with open(path, 'wb') as handle:
             pickle.dump(d_graph, handle)
 
-    def to_dict(self, is_copy=False):
+    def to_dict(self, deep_copy=False):
 
         d_graph = {
-            'is_drained': self.is_drained, 'is_dried': False, 'matrices': self.matrices, 'levels': self.levels,
-            'depth': self.depth
+            'project': self.project,
+            'graph_id': self.graph_id,
+            'is_drained': self.is_drained,
+            'matrices': self.matrices,
+            'ax_levels': self.levels,
+            'depth': self.depth,
+            'partitions': self.partitions,
+            'precision': self.precision,
         }
 
-        if is_copy:
+        if deep_copy:
             d_graph.update({'matrices': copy.deepcopy(self.matrices), 'levels': self.levels.copy()})
 
         return d_graph
 
     def copy(self):
-        return self.from_dict(self.to_dict(is_copy=True), self.project, self.graph_id)
+        return self.from_dict(self.to_dict(deep_copy=True))

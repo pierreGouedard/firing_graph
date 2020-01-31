@@ -151,13 +151,13 @@ class SupervisedSampler(object):
                 # Set partition
                 partitions = [
                     {'indices': [], 'name': "base", "depth": 4},
-                    {'indices': self.n_vertices + 1, "name": "transient", "depth": 3},
+                    {'indices': range(self.n_vertices), "name": "transient", "depth": 3},
                 ]
 
                 # Add structure
-                l_structures.append(StructureIntersection(
-                    self.n_vertices, self.n_inputs, self.n_outputs, self.vertices, drainer_params['weight'], i,
-                    np.array([self.l0] * (self.n_vertices + 1)), **{"partitions": partitions}
+                l_structures.append(StructureIntersection.from_input_indices(
+                    self.n_inputs, self.n_outputs, np.array([self.l0] * (self.n_vertices + 1)), i,
+                    self.vertices[i], drainer_params['weight'], **{"partitions": partitions}
                 ))
 
         else:
@@ -173,7 +173,8 @@ class SupervisedSampler(object):
 
                 # Add structure
                 l_structures.append(structure.augment_structure(
-                    self.n_vertices, self.vertices, np.array([self.l0] * self.n_vertices), **{"partitions": partitions}
+                    self.n_vertices, self.vertices[i], np.array([self.l0] * self.n_vertices), drainer_params['weight'],
+                    **{"partitions": partitions}
                 ))
 
         firing_graph = self.merge_structures(l_structures, drainer_params)
@@ -189,9 +190,13 @@ class SupervisedSampler(object):
         :param l_structures:
         :return:
         """
+
+        if len(l_structures) == 0:
+            return None
+
         # Make sure all graph has the same depth
-        assert(len(set([fg.depth for fg in l_structures])) == 1), "Firing graph merge is possible only if all firing " \
-                                                                  "graph has the same depth."
+        assert len(set([fg.depth for fg in l_structures])) == 1, "Firing graph merge is possible only if all firing " \
+                                                                 "graph has the same depth."
 
         l_partitions, n_core_current, l_levels, depth = [], 0, [], l_structures[0].depth
         d_matrices = create_empty_matrices(self.n_inputs, self.n_outputs, 0)
@@ -202,7 +207,7 @@ class SupervisedSampler(object):
             l_partitions.append({
                 'indices': [n_core_current + i for i in range(structure.Cw.shape[1])],
                 'depth': structure.depth,
-                'output': structure.Ow.nonzero()[1][0]
+                'index_output': structure.Ow.nonzero()[1][0]
             })
     
             if structure.partitions is not None:
@@ -236,7 +241,8 @@ class SupervisedSampler(object):
                 {
                     'indices': [self.firing_graph.Cw.shape[0] + i for i in partition['indices']],
                     'depth': partition['depth'],
-                    'precision': partition['precision']
+                    'precision': partition['precision'],
+                    'index_output': partition['index_output']
                 }
                 for partition in firing_graph.partitions
             ]
