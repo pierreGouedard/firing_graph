@@ -4,7 +4,7 @@ from scipy.sparse import csc_matrix, csr_matrix, lil_matrix, hstack, vstack
 
 # local import
 from ..data_structure.graph import FiringGraph
-from ..data_structure.structures import StructureIntersection
+from ..data_structure.structures import StructureIntersection, StructureEmptyIntersection, StructureYala
 from ..data_structure.utils import create_empty_matrices, augment_matrices
 
 
@@ -148,33 +148,23 @@ class SupervisedSampler(object):
         if self.structures is None:
             for i in range(self.n_outputs):
 
-                # Set partition
-                partitions = [
-                    {'indices': [], 'name': "base", "depth": 4},
-                    {'indices': range(self.n_vertices), "name": "transient", "depth": 3},
-                ]
-
-                # Add structure
-                l_structures.append(StructureIntersection.from_input_indices(
-                    self.n_inputs, self.n_outputs, np.array([self.l0] * (self.n_vertices + 1)), i,
-                    self.vertices[i], drainer_params['weight'], **{"partitions": partitions}
+                # Add Empty base and sampled intersection into a yala structure
+                l_structures.append(StructureYala.from_structure(
+                    StructureEmptyIntersection(self.n_inputs, self.n_outputs, i),
+                    StructureIntersection.from_input_indices(
+                        self.n_inputs, self.n_outputs, np.array([self.l0] * (self.n_vertices + 1)), i, self.vertices[i],
+                        drainer_params['weight'])
                 ))
 
         else:
             for i, structure in enumerate(self.structures):
 
-                # Set partitions
-                partitions = [
-                    {'indices': range(structure.n_intersection), 'name': "base", 'precision': structure.precision,
-                     "depth": 2},
-                    {'indices': [structure.n_intersection + j for j in range(self.n_vertices)], "name": "transient",
-                     "depth": 3},
-                ]
-
-                # Add structure
-                l_structures.append(structure.augment_structure(
-                    self.n_vertices, self.vertices[i], np.array([self.l0] * self.n_vertices), drainer_params['weight'],
-                    **{"partitions": partitions}
+                # Add Empty base and sampled intersection into a yala structure
+                l_structures.append(StructureYala.from_structure(
+                    structure,
+                    StructureIntersection.from_input_indices(
+                        self.n_inputs, self.n_outputs, np.array([self.l0] * (self.n_vertices + 1)),
+                        structure.index_output, self.vertices[i], drainer_params['weight'])
                 ))
 
         firing_graph = self.merge_structures(l_structures, drainer_params)
@@ -222,6 +212,10 @@ class SupervisedSampler(object):
 
             # Merge levels
             l_levels.extend(list(structure.levels))
+
+        # Transform matrices to csc sparse format
+        d_matrices['Iw'], d_matrices['Cw'] = d_matrices['Iw'].tocsc(), d_matrices['Cw'].tocsc()
+        d_matrices['Ow'] = d_matrices['Ow'].tocsc()
 
         return FiringGraph(
             'fg', np.array(l_levels), d_matrices, depth=depth, partitions=l_partitions, drainer_params=drainer_params

@@ -156,11 +156,11 @@ def augment_matrices(d_matrices_a, d_matrices_b):
     sax_Cm_lower = hstack([lil_matrix((d_matrices_b['Cm'].shape[0], d_matrices_a['Cm'].shape[0])), d_matrices_b['Cm']])
 
     return {
-        'Iw': hstack([d_matrices_a['Iw'], d_matrices_b['Iw']]).tocsc(),
+        'Iw': hstack([d_matrices_a['Iw'], d_matrices_b['Iw']]).tolil(),
         'Im': hstack([d_matrices_a['Im'], d_matrices_b['Im']]).tolil(),
-        'Ow': vstack([d_matrices_a['Ow'], d_matrices_b['Ow']]).tocsc(),
+        'Ow': vstack([d_matrices_a['Ow'], d_matrices_b['Ow']]).tolil(),
         'Om': vstack([d_matrices_a['Om'], d_matrices_b['Om']]).tolil(),
-        'Cw': vstack([sax_Cw_upper, sax_Cw_lower]).tocsc(),
+        'Cw': vstack([sax_Cw_upper, sax_Cw_lower]).tolil(),
         'Cm': vstack([sax_Cm_upper, sax_Cm_lower]).tolil()
     }
 
@@ -175,10 +175,10 @@ def add_core_vertices(d_matrices, n_core, offset):
     sax_Cm_upper = hstack([d_matrices['Cm'][:offset, :offset], lil_matrix((offset, n_core))])
 
     return {
-        'Iw': hstack([d_matrices['Iw'][:, :offset], lil_matrix((n_inputs, n_core))]).tocsc(),
+        'Iw': hstack([d_matrices['Iw'][:, :offset], lil_matrix((n_inputs, n_core))]).tolil(),
         'Im': hstack([d_matrices['Im'][:, :offset], lil_matrix((n_inputs, n_core))]).tolil(),
-        'Ow': vstack([d_matrices['Ow'][:, :offset], lil_matrix((n_core, n_outputs))]).tocsc(),
+        'Ow': vstack([d_matrices['Ow'][:, :offset], lil_matrix((n_core, n_outputs))]).tolil(),
         'Om': vstack([d_matrices['Om'][:, :offset], lil_matrix((n_core, n_outputs))]).tolil(),
-        'Cw': vstack([sax_Cw_upper, lil_matrix((n_core, sax_Cw_upper.shape[1]))]).tocsc(),
+        'Cw': vstack([sax_Cw_upper, lil_matrix((n_core, sax_Cw_upper.shape[1]))]).tolil(),
         'Cm': vstack([sax_Cm_upper, lil_matrix((n_core, sax_Cm_upper.shape[1]))]).tolil()
     }

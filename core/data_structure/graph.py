@@ -203,7 +203,7 @@ class FiringGraph(object):
         }
 
         if deep_copy:
-            d_graph.update({'matrices': copy.deepcopy(self.matrices), 'levels': self.levels.copy()})
+            d_graph.update({'matrices': copy.deepcopy(self.matrices), 'ax_levels': self.levels.copy()})
 
         return d_graph
 
