@@ -1,6 +1,6 @@
 # Global import
 import numpy as np
-from scipy.sparse import csc_matrix, csr_matrix, lil_matrix, hstack, vstack
+from scipy.sparse import csc_matrix, csr_matrix, vstack
 
 # local import
 from ..data_structure.graph import FiringGraph
@@ -152,8 +152,8 @@ class SupervisedSampler(object):
                 l_structures.append(StructureYala.from_structure(
                     StructureEmptyIntersection(self.n_inputs, self.n_outputs, i),
                     StructureIntersection.from_input_indices(
-                        self.n_inputs, self.n_outputs, np.array([self.l0] * (self.n_vertices + 1)), i, self.vertices[i],
-                        drainer_params['weight'])
+                        self.n_inputs, self.n_outputs, self.l0, i, self.vertices[i], drainer_params['weight']
+                    )
                 ))
 
         else:
@@ -163,8 +163,9 @@ class SupervisedSampler(object):
                 l_structures.append(StructureYala.from_structure(
                     structure,
                     StructureIntersection.from_input_indices(
-                        self.n_inputs, self.n_outputs, np.array([self.l0] * (self.n_vertices + 1)),
-                        structure.index_output, self.vertices[i], drainer_params['weight'])
+                        self.n_inputs, self.n_outputs, self.l0, structure.index_output, self.vertices[i],
+                        drainer_params['weight']
+                    )
                 ))
 
         firing_graph = self.merge_structures(l_structures, drainer_params)
@@ -207,7 +208,6 @@ class SupervisedSampler(object):
                 l_partitions[-1].update({'precision': structure.precision})
 
             n_core_current += structure.Cw.shape[1]
-
             d_matrices = augment_matrices(d_matrices, structure.matrices)
 
             # Merge levels

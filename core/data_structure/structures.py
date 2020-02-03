@@ -12,11 +12,11 @@ class StructureEmptyIntersection(FiringGraph):
     def __init__(self, n_inputs, n_outputs, index_output, **kwargs):
 
         self.n_inputs, self.n_outputs, self.n_intersection = n_inputs, n_outputs, 0
-        self.index_output, n_core = index_output, 0
+        self.index_output, self.n_core = index_output, 0
 
         kwargs.update({
             'project': 'StructureEmptyIntersection', 'ax_levels': np.array([]), 'depth': 2,
-            'matrices': create_empty_matrices(n_inputs, n_outputs, n_core)
+            'matrices': create_empty_matrices(n_inputs, n_outputs, self.n_core)
         })
 
         # Invoke parent constructor
@@ -30,7 +30,6 @@ class StructureIntersection(FiringGraph):
     track of the firing of vertices.
 
     """
-
     def __init__(self, n_intersection, n_inputs, n_outputs, ax_levels, index_output, matrices, **kwargs):
 
         self.n_inputs, self.n_outputs, self.n_intersection = n_inputs, n_outputs, n_intersection
@@ -43,6 +42,10 @@ class StructureIntersection(FiringGraph):
 
         # Invoke parent constructor
         super(StructureIntersection, self).__init__(**kwargs)
+
+    @property
+    def n_core(self):
+        return self.n_intersection + int(self.n_intersection > 1)
 
     @staticmethod
     def from_dict(d_struct, graph_kwargs):
@@ -89,10 +92,15 @@ class StructureIntersection(FiringGraph):
         )
 
     @staticmethod
-    def from_input_indices(n_inputs, n_outputs, ax_levels, index_output, l_inputs, weight, enable_drain=True, **kwargs):
+    def from_input_indices(n_inputs, n_outputs, level, index_output, l_inputs, weight, enable_drain=True, **kwargs):
 
         # Set number of intersection
         n_intersection = len(l_inputs)
+
+        # Set levels
+        ax_levels = np.array([level] * n_intersection)
+        if n_intersection > 1:
+            ax_levels = np.hstack((ax_levels, np.array([1])))
 
         # Initialize Matrices
         d_matrices = create_empty_matrices(n_inputs, n_outputs, n_intersection + int(n_intersection > 1))
@@ -119,7 +127,6 @@ class StructureIntersection(FiringGraph):
     def augment_structure(self, n_intersection, l_inputs, ax_levels, weight, enable_draining=True, partitions=None):
 
         # Compute new number of core vertices
-        n_core = self.n_intersection + n_intersection + 1
         d_matrices = add_core_vertices(self.matrices, n_intersection + 1, offset=self.n_intersection)
 
         # Set levels
@@ -130,12 +137,12 @@ class StructureIntersection(FiringGraph):
             d_matrices['Iw'][list(l_bits), self.n_intersection + i] = weight
             d_matrices['Im'][list(l_bits), self.n_intersection + i] = enable_draining
 
-        d_matrices['Cw'][:n_core - 1, n_core - 1] = 1
+        d_matrices['Cw'][:self.n_core - 1, self.n_core - 1] = 1
         d_matrices['Iw'], d_matrices['Cw'] = d_matrices['Iw'].tocsc(), d_matrices['Cw'].tocsc()
 
         # Set outputs
-        d_matrices['Ow'] = lil_matrix((n_core, self.n_outputs))
-        d_matrices['Ow'][n_core - 1, self.index_output] = 1
+        d_matrices['Ow'] = lil_matrix((self.n_core, self.n_outputs))
+        d_matrices['Ow'][self.n_core - 1, self.index_output] = 1
         d_matrices['Ow'] = d_matrices['Ow'].tocsc()
 
         self.matrices.update(d_matrices)
@@ -193,9 +200,8 @@ class StructureYala(FiringGraph):
     track of the firing of vertices.
 
     """
-    n_core = 1
 
-    def __init__(self, n_inputs, n_outputs, ax_levels, index_output, matrices, depth, **kwargs):
+    def __init__(self, n_inputs, n_outputs, ax_levels, index_output, matrices, **kwargs):
 
         self.n_inputs, self.n_outputs, self.index_output = index_output, n_inputs, n_outputs
         kwargs.update({'project': 'StructureYala', 'ax_levels': ax_levels, 'matrices': matrices})
@@ -206,18 +212,18 @@ class StructureYala(FiringGraph):
     @staticmethod
     def from_structure(base_structure, transient_structure):
 
-        depth, n_core = 3, base_structure.n_intersection + transient_structure.n_intersection + 1
+        depth, n_core = 3, base_structure.n_core + transient_structure.n_core
         matrices = augment_matrices(base_structure.matrices, transient_structure.matrices)
         ax_levels = np.hstack((base_structure.levels, transient_structure.levels))
 
         # If base structure is not empty add merging layer's vertices
         if base_structure.n_intersection > 0:
             depth, n_core = depth + 1, n_core + 2
-            matrices = add_core_vertices(matrices, 2, base_structure.n_intersection + transient_structure.n_intersection)
+            matrices = add_core_vertices(matrices, 2, n_core - 2)
             ax_levels = np.hstack((ax_levels, np.array([1, 2])))
 
             # Link core vertices
-            matrices['Cw'][base_structure.n_intersection, -2], matrices['Cw'][-2, -1] = 1, 1
+            matrices['Cw'][base_structure.n_intersection - 1, -2], matrices['Cw'][-2, -1] = 1, 1
             matrices['Cw'][base_structure.n_intersection + transient_structure.n_intersection, -1] = 1
 
         # Transform matrices to csc sparse format
@@ -244,6 +250,24 @@ class StructureYala(FiringGraph):
             **kwargs
         )
 
+    @staticmethod
+    def from_partition(partition, firing_graph, index_output=None, add_backward_firing=False):
 
+        ax_levels = firing_graph.levels[partition['indices']]
+        matrices = reduce_matrices(firing_graph.matrices, partition['indices'])
+        index_output = partition.get('index_output', index_output)
 
+        # Add kwargs
+        kwargs = {
+            'partitions': partition.get('partitions', None), 'precision': partition.get('precision', None),
+            'depth': partition['depth']
+        }
 
+        if add_backward_firing:
+            kwargs.update(
+                {'backward_firing': reduce_backward_firing(firing_graph.backward_firing, partition['indices'])}
+            )
+
+        return StructureYala(
+            firing_graph.I.shape[0], firing_graph.O.shape[1], ax_levels, index_output, matrices, **kwargs
+        )
