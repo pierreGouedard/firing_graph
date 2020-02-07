@@ -3,9 +3,6 @@ import numpy as np
 from scipy.sparse import csc_matrix, csr_matrix, vstack
 
 # local import
-from ..data_structure.graph import FiringGraph
-from ..data_structure.structures import StructureIntersection, StructureEmptyIntersection, StructureYala
-from ..data_structure.utils import create_empty_matrices, augment_matrices
 
 
 class SupervisedSampler(object):
@@ -13,7 +10,7 @@ class SupervisedSampler(object):
 
     """
     def __init__(self, imputer, n_inputs, n_outputs, batch_size, p_sample=0.8, n_vertices=10, l0=1, firing_graph=None,
-                 structures=None, max_iter=1000, verbose=0, output_negation=False):
+                 base_patterns=None, max_iter=1000, verbose=0, output_negation=False):
         """
         :param imputer: imputer (see core.tools.imputers)
         :param n_inputs: list [#input, #output]
@@ -21,7 +18,7 @@ class SupervisedSampler(object):
         :param p_sample: float probability of sampling
         :param n_vertices: int
         :param firing_graph:
-        :param structures:
+        :param base_patterns:
         :param verbose: int
         :param output_negation: bool
         """
@@ -39,7 +36,7 @@ class SupervisedSampler(object):
 
         # Core attributes
         self.firing_graph = firing_graph
-        self.structures = structures
+        self.base_patterns = base_patterns
         self.vertices = None
         self.imputer = imputer
 
@@ -91,8 +88,8 @@ class SupervisedSampler(object):
 
     def discriminative_sampling(self):
         # Init
-        self.vertices = {i: [] for i in range(len(self.structures))}
-        ax_selected, n = np.zeros(len(self.structures), dtype=int), 0
+        self.vertices = {i: [] for i in range(len(self.base_patterns))}
+        ax_selected, n = np.zeros(len(self.base_patterns), dtype=int), 0
 
         sax_i, sax_got = self.get_signal_batch()
 
@@ -102,15 +99,15 @@ class SupervisedSampler(object):
             else:
                 sax_fg = csc_matrix((self.batch_size, 1), dtype=bool)
 
-            l_structures_sub = [(j, struct) for j, struct in enumerate(self.structures) if i in struct.O.nonzero()[1]]
+            l_pattern_sub = [(j, struct) for j, struct in enumerate(self.base_patterns) if i in struct.O.nonzero()[1]]
 
-            for j, struct in l_structures_sub:
+            for j, pat in l_pattern_sub:
 
-                l_struct_indices = list(set(struct.I.nonzero()[0]))
-                sax_struct = struct.propagate(sax_i)[:, i]
+                l_pat_indices = list(set(pat.I.nonzero()[0]))
+                sax_pat = pat.propagate(sax_i)[:, i]
 
                 # selected random active
-                ax_mask = sax_struct.multiply(sax_got[:, i]).toarray()[:, 0] & ~(sax_fg.toarray()[:, 0])
+                ax_mask = sax_pat.multiply(sax_got[:, i]).toarray()[:, 0] & ~(sax_fg.toarray()[:, 0])
                 n_sample = min(ax_mask.sum(), self.n_vertices)
 
                 if n_sample == 0:
@@ -120,7 +117,7 @@ class SupervisedSampler(object):
                 sax_samples = sax_i[ax_mask, :][l_sampled_indices, :]
 
                 for sax_sample in sax_samples:
-                    ax_indices = np.array([ind for ind in sax_sample.nonzero()[1] if ind not in l_struct_indices])
+                    ax_indices = np.array([ind for ind in sax_sample.nonzero()[1] if ind not in l_pat_indices])
                     ax_mask = np.random.binomial(1, self.p_sample, len(ax_indices))
 
                     # Add sampled bits to list of output i vertices
@@ -129,128 +126,5 @@ class SupervisedSampler(object):
                         ax_selected[j] += 1
 
         print("[Sampler]: Discriminative sampling has sampled {} vertices".format(ax_selected.sum()))
-
-        return self
-
-    def build_firing_graph(self, drainer_params, return_structures=False):
-        """
-
-        :return:
-        """
-
-        if self.vertices is None:
-            raise ValueError(
-                "Before Building firing graph, one need to sample input bits using generative or discriminative "
-                "sampling"
-            )
-
-        l_structures = []
-        if self.structures is None:
-            for i in range(self.n_outputs):
-
-                # Add Empty base and sampled intersection into a yala structure
-                l_structures.append(StructureYala.from_structure(
-                    StructureEmptyIntersection(self.n_inputs, self.n_outputs, i),
-                    StructureIntersection.from_input_indices(
-                        self.n_inputs, self.n_outputs, self.l0, i, self.vertices[i], drainer_params['weight']
-                    )
-                ))
-
-        else:
-            for i, structure in enumerate(self.structures):
-
-                # Add Empty base and sampled intersection into a yala structure
-                l_structures.append(StructureYala.from_structure(
-                    structure,
-                    StructureIntersection.from_input_indices(
-                        self.n_inputs, self.n_outputs, self.l0, structure.index_output, self.vertices[i],
-                        drainer_params['weight']
-                    )
-                ))
-
-        firing_graph = self.merge_structures(l_structures, drainer_params)
-
-        if return_structures:
-            return firing_graph, l_structures
-
-        return firing_graph
-
-    def merge_structures(self, l_structures, drainer_params):
-        """
-    
-        :param l_structures:
-        :return:
-        """
-
-        if len(l_structures) == 0:
-            return None
-
-        # Make sure all graph has the same depth
-        assert len(set([fg.depth for fg in l_structures])) == 1, "Firing graph merge is possible only if all firing " \
-                                                                 "graph has the same depth."
-
-        l_partitions, n_core_current, l_levels, depth = [], 0, [], l_structures[0].depth
-        d_matrices = create_empty_matrices(self.n_inputs, self.n_outputs, 0)
-
-        for structure in l_structures:
-    
-            # Set partitions
-            l_partitions.append({
-                'indices': [n_core_current + i for i in range(structure.Cw.shape[1])],
-                'depth': structure.depth,
-                'index_output': structure.Ow.nonzero()[1][0]
-            })
-    
-            if structure.partitions is not None:
-                l_partitions[-1].update({'partitions': structure.partitions})
-
-            if structure.precision is not None:
-                l_partitions[-1].update({'precision': structure.precision})
-
-            n_core_current += structure.Cw.shape[1]
-            d_matrices = augment_matrices(d_matrices, structure.matrices)
-
-            # Merge levels
-            l_levels.extend(list(structure.levels))
-
-        # Transform matrices to csc sparse format
-        d_matrices['Iw'], d_matrices['Cw'] = d_matrices['Iw'].tocsc(), d_matrices['Cw'].tocsc()
-        d_matrices['Ow'] = d_matrices['Ow'].tocsc()
-
-        return FiringGraph(
-            'fg', np.array(l_levels), d_matrices, depth=depth, partitions=l_partitions, drainer_params=drainer_params
-        )
-
-    def merge_firing_graph(self, firing_graph):
-        if self.firing_graph is None:
-            self.firing_graph = firing_graph
-            return
-
-        # Make sure firing graph has the same depth as existing one
-        assert firing_graph.depth == self.firing_graph.depth, 'Non compatible depth'
-
-        # merge partitions
-        if firing_graph.partitions is not None:
-            l_partitions = [
-                {
-                    'indices': [self.firing_graph.Cw.shape[0] + i for i in partition['indices']],
-                    'depth': partition['depth'],
-                    'precision': partition['precision'],
-                    'index_output': partition['index_output']
-                }
-                for partition in firing_graph.partitions
-            ]
-
-            if self.firing_graph.partitions is not None:
-                self.firing_graph.partitions.extend(l_partitions)
-
-            else:
-                self.firing_graph.partitions = l_partitions
-
-        # merge matrices
-        self.firing_graph.matrices = augment_matrices(self.firing_graph.matrices, firing_graph.matrices)
-
-        # Merge levels
-        self.firing_graph.levels = np.hstack((self.firing_graph.levels, firing_graph.levels))
 
         return self
