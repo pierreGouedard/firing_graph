@@ -10,7 +10,7 @@ class SupervisedSampler(object):
 
     """
     def __init__(self, imputer, n_inputs, n_outputs, batch_size, p_sample=0.8, n_vertices=10, l0=1, firing_graph=None,
-                 base_patterns=None, max_iter=1000, verbose=0, output_negation=False):
+                 base_patterns=None, verbose=0, output_negation=False):
         """
         :param imputer: imputer (see core.tools.imputers)
         :param n_inputs: list [#input, #output]
@@ -29,7 +29,7 @@ class SupervisedSampler(object):
         self.p_sample, self.n_vertices, self.output_negation = p_sample, n_vertices, output_negation
 
         # Utils parameters
-        self.verbose, self.max_iter = verbose, max_iter
+        self.verbose = verbose
 
         # Structure  parameter
         self.l0 = l0

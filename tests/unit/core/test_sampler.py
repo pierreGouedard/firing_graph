@@ -16,7 +16,7 @@ class TestSampler(unittest.TestCase):
 
         # Set core parameters
         self.ni, self.no, self.n_vertices, self.p_sample, self.weight = 100, 4, 2, 0.8, 10
-        self.n_dead, self.precision = 10, 0.5
+        self.n_dead, self.precision, self.batch_size = 10, 0.5, 100
 
         # Generate random I / O
         self.sax_inputs = hstack(
@@ -39,11 +39,12 @@ class TestSampler(unittest.TestCase):
         """
         # Instantiate sampler
         imputer = init_imputer(self.sax_inputs, self.sax_outputs)
-        sampler = SupervisedSampler(imputer, self.ni, self.no, self.p_sample, self.n_vertices, max_iter=100)
+        sampler = SupervisedSampler(imputer, self.ni, self.no, self.batch_size, self.p_sample, self.n_vertices)
 
         # Sample vertices
         sampler.generative_sampling()
-
+        import IPython
+        IPython.embed()
         self.assertEqual(len(sampler.vertices), self.no)
         self.assertTrue(all([len(l_v) == self.n_vertices for _, l_v in sampler.vertices.items()]))
 
@@ -55,7 +56,7 @@ class TestSampler(unittest.TestCase):
         # Instantiate sampler
         imputer = init_imputer(self.sax_inputs, self.sax_outputs)
         sampler = SupervisedSampler(
-            imputer, self.ni, self.no, self.p_sample, self.n_vertices, base_patterns=self.base_patterns
+            imputer, self.ni, self.no, self.batch_size, self.p_sample, self.n_vertices, base_patterns=self.base_patterns
         )
 
         # Sample vertices
