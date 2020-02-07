@@ -1,7 +1,7 @@
 # Global imports
 import unittest
 import numpy as np
-from scipy.sparse import csc_matrix, hstack, lil_matrix
+from scipy.sparse import csc_matrix, hstack
 
 # Local import
 from core.tools.imputers import ArrayImputer
@@ -43,8 +43,6 @@ class TestSampler(unittest.TestCase):
 
         # Sample vertices
         sampler.generative_sampling()
-        import IPython
-        IPython.embed()
         self.assertEqual(len(sampler.vertices), self.no)
         self.assertTrue(all([len(l_v) == self.n_vertices for _, l_v in sampler.vertices.items()]))
 
@@ -68,55 +66,14 @@ class TestSampler(unittest.TestCase):
 
         # Make sure that base_pattern corresponding to sampled overlap with indices sampled
         for i, pattern in enumerate(self.base_patterns):
-            ax_pattern = pattern.propagate(self.sax_inputs).toarray()[:, i] * self.sax_outputs[:, i].toarray()
-
-            import IPython
-            IPython.embed()
-
+            ax_pattern = np.multiply(
+                pattern.propagate(self.sax_inputs).toarray()[:, i],
+                self.sax_outputs.toarray()[:, i]
+            )
+            self.assertTrue(not (ax_pattern.dot(self.sax_inputs[:, -self.n_dead].toarray()) > 0).any())
             for j, l_ind in enumerate(sampler.vertices[i]):
-                ax_signals_sampled = self.sax_inputs[:, l_ind].toarray()
+                ax_signals_sampled = self.sax_inputs[:, list(l_ind)].toarray()
                 self.assertTrue((ax_pattern.dot(ax_signals_sampled) > 0).all())
-
-
-def generate_random_structures(i, n_structure, n_inputs, n_outputs, n_pos=2, n_neg=2, precision=0.5):
-    """
-
-    :param i:
-    :param n_structure:
-    :param n_inputs:
-    :param n_outputs:
-    :param n_pos:
-    :param n_neg:
-    :param precision:
-    :return:
-    """
-    l_vertices = [
-        (
-            np.random.choice(range(n_inputs), n_pos, replace=False),
-            np.random.choice(range(n_inputs), n_neg, replace=False)
-         ) for _ in range(n_structure)
-    ]
-
-    d_mask, ax_levels = {'I': np.zeros(n_inputs), 'C': np.zeros(5), 'O': np.zeros(n_outputs)}, np.ones(5)
-    ax_levels = np.array([1, 1, 1, 1, 1])
-    l_structures = []
-    for bit_pos, bit_neg in l_vertices:
-
-        # Init matrices
-        sax_I, sax_C, sax_O = lil_matrix((n_inputs, 5)), lil_matrix((5, 5)), lil_matrix((5, n_outputs))
-
-        # Set links
-        sax_I[bit_pos, 0] = 1
-        sax_I[bit_neg, 1] = 1
-        sax_C[0, 2], sax_C[[0, 1], 3], sax_C[2, 4], sax_C[3, 4] = 1, 1, 1, 1
-        sax_O[4, i] = 1
-
-        # Append structure
-        l_structures.append(FiringGraph.from_matrices(
-            sax_I, sax_C, sax_O, ax_levels.copy(), mask_vertices=d_mask.copy(), depth=4, precision=precision
-        ))
-
-    return l_structures, l_vertices
 
 
 def init_imputer(sax_input, sax_output):
@@ -140,7 +97,7 @@ def generate_pattern(n_inputs, n_outputs, index_output, l_indices):
     d_matrices = create_empty_matrices(n_inputs, n_outputs, 1)
 
     # Set level and matrices
-    ax_levels = np.ones(1)
+    ax_levels = np.ones(1) * (len(l_indices) - 1)
     d_matrices['Iw'][l_indices, 0] = 1
     d_matrices['Ow'][0, index_output] = 1
 
