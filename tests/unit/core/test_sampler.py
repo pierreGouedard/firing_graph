@@ -15,7 +15,7 @@ class TestSampler(unittest.TestCase):
     def setUp(self):
 
         # Set core parameters
-        self.ni, self.no, self.n_vertices, self.p_sample, self.weight = 100, 4, 2, 0.8, 10
+        self.ni, self.no, self.n_samples, self.p_sample, self.weight = 100, 4, 2, 0.8, 10
         self.n_dead, self.precision, self.batch_size = 10, 0.5, 100
 
         # Generate random I / O
@@ -25,10 +25,10 @@ class TestSampler(unittest.TestCase):
         self.sax_outputs = csc_matrix(np.random.binomial(1, 0.5, (1000, self.no)))
 
         # Set structures
-        self.base_patterns, self.indices = [], []
+        self.patterns, self.indices = [], []
         for i in range(self.no):
             self.indices.append(np.random.randint(0, self.ni - self.n_dead, 5))
-            self.base_patterns.append(
+            self.patterns.append(
                 generate_pattern(self.ni, self.no, i, self.indices[-1])
             )
 
@@ -39,12 +39,12 @@ class TestSampler(unittest.TestCase):
         """
         # Instantiate sampler
         imputer = init_imputer(self.sax_inputs, self.sax_outputs)
-        sampler = SupervisedSampler(imputer, self.ni, self.no, self.batch_size, self.p_sample, self.n_vertices)
+        sampler = SupervisedSampler(imputer, self.ni, self.no, self.batch_size, self.p_sample, self.n_samples)
 
         # Sample vertices
         sampler.generative_sampling()
         self.assertEqual(len(sampler.vertices), self.no)
-        self.assertTrue(all([len(l_v) == self.n_vertices for _, l_v in sampler.vertices.items()]))
+        self.assertTrue(all([len(l_v) == self.n_samples for _, l_v in sampler.vertices.items()]))
 
     def test_discriminative_sampling(self):
         """
@@ -54,18 +54,18 @@ class TestSampler(unittest.TestCase):
         # Instantiate sampler
         imputer = init_imputer(self.sax_inputs, self.sax_outputs)
         sampler = SupervisedSampler(
-            imputer, self.ni, self.no, self.batch_size, self.p_sample, self.n_vertices, base_patterns=self.base_patterns
+            imputer, self.ni, self.no, self.batch_size, self.p_sample, self.n_samples, patterns=self.patterns
         )
 
         # Sample vertices
         sampler.discriminative_sampling()
 
         # Check sampling
-        self.assertEqual(len(sampler.vertices), len(self.base_patterns))
-        self.assertTrue(all([len(l_v) == self.n_vertices for _, l_v in sampler.vertices.items()]))
+        self.assertEqual(len(sampler.vertices), len(self.patterns))
+        self.assertTrue(all([len(l_v) == self.n_samples for _, l_v in sampler.vertices.items()]))
 
         # Make sure that base_pattern corresponding to sampled overlap with indices sampled
-        for i, pattern in enumerate(self.base_patterns):
+        for i, pattern in enumerate(self.patterns):
             ax_pattern = np.multiply(
                 pattern.propagate(self.sax_inputs).toarray()[:, i],
                 self.sax_outputs.toarray()[:, i]
@@ -83,7 +83,6 @@ def init_imputer(sax_input, sax_output):
     :param sax_output:
     :return:
     """
-
     # Create and init imputers
     imputer = ArrayImputer(sax_input, sax_output)
     imputer.stream_features()
@@ -92,7 +91,15 @@ def init_imputer(sax_input, sax_output):
 
 
 def generate_pattern(n_inputs, n_outputs, index_output, l_indices):
+    """
+    Create and return simple pattern (firing_graph).
 
+    :param n_inputs:
+    :param n_outputs:
+    :param index_output:
+    :param l_indices:
+    :return:
+    """
     # Initialize Matrices
     d_matrices = create_empty_matrices(n_inputs, n_outputs, 1)
 

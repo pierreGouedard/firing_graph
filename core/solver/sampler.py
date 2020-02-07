@@ -7,26 +7,30 @@ from scipy.sparse import csc_matrix, csr_matrix, vstack
 
 class SupervisedSampler(object):
     """
-
+    This class implements a supervised sampler engine. It samples randomly input bit base on a concomitant activation
+    of bit and output bit.
     """
-    def __init__(self, imputer, n_inputs, n_outputs, batch_size, p_sample=0.8, n_vertices=10, l0=1, firing_graph=None,
-                 base_patterns=None, verbose=0, output_negation=False):
+    def __init__(self, imputer, n_inputs, n_outputs, n_batch, p_sample=0.8, n_samples=10, l0=1, firing_graph=None,
+                 patterns=None, verbose=0):
         """
-        :param imputer: imputer (see core.tools.imputers)
-        :param n_inputs: list [#input, #output]
-        :param n_outputs: list [#input, #output]
-        :param p_sample: float probability of sampling
-        :param n_vertices: int
-        :param firing_graph:
-        :param base_patterns:
-        :param verbose: int
-        :param output_negation: bool
+        :param imputer: Serve input and  output activation.
+        :type imputer: core.tools.imputers.ArrayImputer
+        :param n_inputs: Number of input bit.
+        :param n_outputs: Number of input bit.
+        :param n_batch: Number of input grid state to read for sampling.
+        :param p_sample: Input bit's sampling rate in [0., 1.]
+        :param n_samples: Number of sampling.
+        :param firing_graph: Firing graph.
+        :type firing_graph: core.data_structure.firing_graph.FiringGraph
+        :param patterns: firing graph.
+        :type patterns: core.data_structure.firing_graph.FiringGraph.
+        :param verbose: Control display.
         """
         # size of problem
-        self.n_inputs, self.n_outputs, self.batch_size = n_inputs, n_outputs, batch_size
+        self.n_inputs, self.n_outputs, self.n_batch = n_inputs, n_outputs, n_batch
 
         # Sampling parameters
-        self.p_sample, self.n_vertices, self.output_negation = p_sample, n_vertices, output_negation
+        self.p_sample, self.n_samples = p_sample, n_samples
 
         # Utils parameters
         self.verbose = verbose
@@ -36,21 +40,30 @@ class SupervisedSampler(object):
 
         # Core attributes
         self.firing_graph = firing_graph
-        self.base_patterns = base_patterns
+        self.patterns = patterns
         self.vertices = None
         self.imputer = imputer
 
     def get_signal_batch(self):
+        """
+        Read in a sparse matrices input and output grid state.
+        :return: tuple of input and output sparse grid activation's matrices
+        """
         sax_i, sax_o = csr_matrix((0, self.n_inputs), dtype=bool), csr_matrix((0, self.n_outputs), dtype=bool)
 
-        for _ in range(self.batch_size):
+        for _ in range(self.n_batch):
             sax_i = vstack([sax_i, self.imputer.next_forward().tocsr()])
             sax_o = vstack([sax_o, self.imputer.next_backward().tocsr()])
 
         return sax_i, sax_o
 
     def generative_sampling(self):
+        """
+        For each output bit, at n_samples occasions, sample randomly activated input grid's bit when output bit is
+        also active and the input grid does not activate firing_graph, if any set.
 
+        :return: Current instance of the class.
+        """
         # Init
         self.vertices = {i: [] for i in range(self.n_outputs)}
         ax_selected, n = np.zeros(self.n_outputs, dtype=int), 0
@@ -61,11 +74,11 @@ class SupervisedSampler(object):
             if self.firing_graph is not None:
                 sax_fg = self.firing_graph.propagate(sax_i)[:, i]
             else:
-                sax_fg = csc_matrix((self.batch_size, 1), dtype=bool)
+                sax_fg = csc_matrix((self.n_batch, 1), dtype=bool)
 
             # selected random active
             ax_mask = sax_got[:, i].toarray()[:, 0] & ~(sax_fg.toarray()[:, 0])
-            n_sample = min(ax_mask.sum(), self.n_vertices)
+            n_sample = min(ax_mask.sum(), self.n_samples)
 
             if n_sample == 0:
                 continue
@@ -87,9 +100,15 @@ class SupervisedSampler(object):
         return self
 
     def discriminative_sampling(self):
+        """
+        For each patterns, at n_samples occasions, sample randomly activated input grid's bit when the input activate
+        the pattern and the output bit linked to it and does not activate firing_graph, if any set.
+
+        :return:
+        """
         # Init
-        self.vertices = {i: [] for i in range(len(self.base_patterns))}
-        ax_selected, n = np.zeros(len(self.base_patterns), dtype=int), 0
+        self.vertices = {i: [] for i in range(len(self.patterns))}
+        ax_selected, n = np.zeros(len(self.patterns), dtype=int), 0
 
         sax_i, sax_got = self.get_signal_batch()
 
@@ -97,9 +116,9 @@ class SupervisedSampler(object):
             if self.firing_graph is not None:
                 sax_fg = self.firing_graph.propagate(sax_i)[:, i]
             else:
-                sax_fg = csc_matrix((self.batch_size, 1), dtype=bool)
+                sax_fg = csc_matrix((self.n_batch, 1), dtype=bool)
 
-            l_pattern_sub = [(j, struct) for j, struct in enumerate(self.base_patterns) if i in struct.O.nonzero()[1]]
+            l_pattern_sub = [(j, struct) for j, struct in enumerate(self.patterns) if i in struct.O.nonzero()[1]]
 
             for j, pat in l_pattern_sub:
 
@@ -108,7 +127,7 @@ class SupervisedSampler(object):
 
                 # selected random active
                 ax_mask = sax_pat.multiply(sax_got[:, i]).toarray()[:, 0] & ~(sax_fg.toarray()[:, 0])
-                n_sample = min(ax_mask.sum(), self.n_vertices)
+                n_sample = min(ax_mask.sum(), self.n_samples)
 
                 if n_sample == 0:
                     continue
