@@ -83,6 +83,7 @@ def init_imputer(sax_input, sax_output):
     :param sax_output:
     :return:
     """
+
     # Create and init imputers
     imputer = ArrayImputer(sax_input, sax_output)
     imputer.stream_features()
