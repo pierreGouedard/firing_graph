@@ -9,7 +9,7 @@ from ..tools.equations.graph import buc, buo, bui
 
 
 class FiringGraphDrainer(object):
-    def __init__(self, firing_graph, imputer, batch_size, p=None, q=None, t=None, verbose=0):
+    def __init__(self, firing_graph, server, batch_size, p=None, q=None, t=None, verbose=0):
 
         # Assert that draining parameters are available
         assert firing_graph.drainer_params.get('p', p) is not None, "parameter p of drainer is None"
@@ -24,7 +24,7 @@ class FiringGraphDrainer(object):
         self.verbose = verbose
 
         # stream feed forward and backward
-        self.imputer = imputer
+        self.server = server
 
         # Init signals
         self.sax_i, self.sax_c, self.sax_o = init_forward_signal(self.firing_graph, self.bs)
@@ -32,17 +32,17 @@ class FiringGraphDrainer(object):
         self.sax_cb, self.sax_ob = init_backward_signal(self.firing_graph, self.bs)
         self.iter = 0
 
-    def reset_all(self, imputer=False):
+    def reset_all(self, server=False):
 
         self.reset_forward()
         self.reset_backward()
         self.iter = 0
 
-        if imputer:
-            self.reset_imputer()
+        if server:
+            self.reset_server()
 
-    def reset_imputer(self):
-        self.imputer.stream_features()
+    def reset_server(self):
+        self.server.stream_features()
 
     def reset_forward(self):
         self.sax_i, self.sax_c, self.sax_o = init_forward_signal(self.firing_graph, self.bs)
@@ -141,7 +141,7 @@ class FiringGraphDrainer(object):
     def forward_transmiting(self, load_input=True):
         # Get new input
         if load_input:
-            self.sax_i = fti(self.imputer, self.firing_graph, self.bs)
+            self.sax_i = fti(self.server, self.firing_graph, self.bs)
         else:
             self.sax_i = csr_matrix((self.bs, self.firing_graph.I.shape[0]), dtype=int)
 
@@ -159,7 +159,7 @@ class FiringGraphDrainer(object):
 
         # If decay reached compute feedback
         if self.iter >= self.firing_graph.depth - 1 and load_output:
-            self.sax_ob = fpo(self.sax_o, self.imputer, self.bs, self.p, self.q)
+            self.sax_ob = fpo(self.sax_o, self.server, self.bs, self.p, self.q)
 
         else:
             self.sax_ob = csc_matrix((self.firing_graph.O.shape[1], self.bs), dtype=int)

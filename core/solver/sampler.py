@@ -10,11 +10,11 @@ class SupervisedSampler(object):
     This class implements a supervised sampler engine. It samples randomly input bit base on a concomitant activation
     of bit and output bit.
     """
-    def __init__(self, imputer, n_inputs, n_outputs, n_batch, p_sample=0.8, n_samples=10, l0=1, firing_graph=None,
+    def __init__(self, server, n_inputs, n_outputs, n_batch, p_sample=0.8, n_samples=10, l0=1, firing_graph=None,
                  patterns=None, verbose=0):
         """
-        :param imputer: Serve input and  output activation.
-        :type imputer: core.tools.imputers.ArrayImputer
+        :param server: Serve input and  output activation.
+        :type server: core.tools.servers.ArrayServer
         :param n_inputs: Number of input bit.
         :param n_outputs: Number of input bit.
         :param n_batch: Number of input grid state to read for sampling.
@@ -42,7 +42,7 @@ class SupervisedSampler(object):
         self.firing_graph = firing_graph
         self.patterns = patterns
         self.vertices = None
-        self.imputer = imputer
+        self.server = server
 
     def get_signal_batch(self):
         """
@@ -52,8 +52,8 @@ class SupervisedSampler(object):
         sax_i, sax_o = csr_matrix((0, self.n_inputs), dtype=bool), csr_matrix((0, self.n_outputs), dtype=bool)
 
         for _ in range(self.n_batch):
-            sax_i = vstack([sax_i, self.imputer.next_forward().tocsr()])
-            sax_o = vstack([sax_o, self.imputer.next_backward().tocsr()])
+            sax_i = vstack([sax_i, self.server.next_forward().tocsr()])
+            sax_o = vstack([sax_o, self.server.next_backward().tocsr()])
 
         return sax_i, sax_o
 

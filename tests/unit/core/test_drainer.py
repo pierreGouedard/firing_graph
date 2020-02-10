@@ -4,7 +4,7 @@ from scipy.sparse import csc_matrix
 
 # Local import
 from core.data_structure.utils import gather_matrices
-from core.tools.imputers import ArrayImputer
+from core.tools.helpers.servers import ArrayServer
 from core.solver.drainer import FiringGraphDrainer
 from utils.interactive_plots import plot_graph
 from utils.patterns import AndPattern2 as ap2, AndPattern3 as ap3
@@ -38,10 +38,10 @@ class TestDrainer(unittest.TestCase):
 
         # Create I/O and save it into tmpdir files
         ax_input, ax_output = self.ap2.generate_io_sequence(1000, seed=1234)
-        imputer = create_imputer(csc_matrix(ax_input), csc_matrix(ax_output))
+        server = create_server(csc_matrix(ax_input), csc_matrix(ax_output))
 
         # Create drainer
-        drainer = FiringGraphDrainer(self.ap2_fg, imputer, t=self.t_mask, p=1, q=1, batch_size=1, verbose=1)
+        drainer = FiringGraphDrainer(self.ap2_fg, server, t=self.t_mask, p=1, q=1, batch_size=1, verbose=1)
         drainer.drain(100)
 
         # Get matrice of the graph
@@ -62,10 +62,10 @@ class TestDrainer(unittest.TestCase):
 
         # Create I/O and save it into tmpdir files
         ax_input, ax_output = self.ap2.generate_io_sequence(1000, seed=1234)
-        imputer = create_imputer(csc_matrix(ax_input), csc_matrix(ax_output))
+        server = create_server(csc_matrix(ax_input), csc_matrix(ax_output))
 
         # Create drainer
-        drainer = FiringGraphDrainer(self.ap2_fg, imputer, t=1000, p=1, q=1, batch_size=10, verbose=1)
+        drainer = FiringGraphDrainer(self.ap2_fg, server, t=1000, p=1, q=1, batch_size=10, verbose=1)
         drainer.drain(n=self.n)
 
         # Get Data and assert result is as expected
@@ -101,10 +101,10 @@ class TestDrainer(unittest.TestCase):
         """
         # Create I/O and save it into tmpdir files
         ax_input, ax_output = self.ap3.generate_io_sequence(1000, seed=1234)
-        imputer = create_imputer(csc_matrix(ax_input), csc_matrix(ax_output))
+        server = create_server(csc_matrix(ax_input), csc_matrix(ax_output))
 
         # Create drainer
-        drainer = FiringGraphDrainer(self.ap3_fg, imputer, t=1000, p=1, q=1, batch_size=1, verbose=1)
+        drainer = FiringGraphDrainer(self.ap3_fg, server, t=1000, p=1, q=1, batch_size=1, verbose=1)
         drainer.drain(n=self.n * 10)
 
         # Get Data and assert result is as expected
@@ -146,15 +146,15 @@ class TestDrainer(unittest.TestCase):
         """
         # Create I/O and save it into tmpdir files
         ax_input, ax_output = self.ap2.generate_io_sequence(1000, seed=1234)
-        imputer = create_imputer(csc_matrix(ax_input), csc_matrix(ax_output))
+        server = create_server(csc_matrix(ax_input), csc_matrix(ax_output))
 
         # Drain with batch size of 2
-        drainer_2 = FiringGraphDrainer(self.ap2_fg.copy(), imputer, t=1000, p=1, q=1, batch_size=2, verbose=1)
+        drainer_2 = FiringGraphDrainer(self.ap2_fg.copy(), server, t=1000, p=1, q=1, batch_size=2, verbose=1)
         drainer_2.drain(n=200)
 
         # Drain with batch size of 1
-        imputer.stream_features()
-        drainer_1 = FiringGraphDrainer(self.ap2_fg.copy(), imputer, t=1000, p=1, q=1, batch_size=1, verbose=1)
+        server.stream_features()
+        drainer_1 = FiringGraphDrainer(self.ap2_fg.copy(), server, t=1000, p=1, q=1, batch_size=1, verbose=1)
         drainer_1.drain(n=400)
 
         # There should be no more difference between edges weight than difference of batch size
@@ -162,8 +162,8 @@ class TestDrainer(unittest.TestCase):
         self.assertTrue(((-2 < ax_diff) & (ax_diff < 2)).all())
 
         # Drain with manual iteration management
-        imputer.stream_features()
-        drainer_1m = FiringGraphDrainer(self.ap2_fg.copy(), imputer, t=1000, p=1, q=1, batch_size=1, verbose=1)
+        server.stream_features()
+        drainer_1m = FiringGraphDrainer(self.ap2_fg.copy(), server, t=1000, p=1, q=1, batch_size=1, verbose=1)
         for _ in range(400):
             drainer_1m.drain()
             drainer_1m.reset_all()
@@ -180,15 +180,15 @@ class TestDrainer(unittest.TestCase):
         """
         # Create I/O and save it into tmpdir files
         ax_input, ax_output = self.ap3.generate_io_sequence(1000, seed=1234)
-        imputer = create_imputer(csc_matrix(ax_input), csc_matrix(ax_output))
+        server = create_server(csc_matrix(ax_input), csc_matrix(ax_output))
 
         # Drain with batch size of 2
-        drainer_2 = FiringGraphDrainer(self.ap3_fg.copy(), imputer, t=1000, p=1, q=1, batch_size=2, verbose=1)
+        drainer_2 = FiringGraphDrainer(self.ap3_fg.copy(), server, t=1000, p=1, q=1, batch_size=2, verbose=1)
         drainer_2.drain(n=100)
 
         # Drain with batch size of 1
-        imputer.stream_features()
-        drainer_1 = FiringGraphDrainer(self.ap3_fg.copy(), imputer, t=1000, p=1, q=1, batch_size=1, verbose=1)
+        server.stream_features()
+        drainer_1 = FiringGraphDrainer(self.ap3_fg.copy(), server, t=1000, p=1, q=1, batch_size=1, verbose=1)
         drainer_1.drain(n=200)
 
         # There should be no more difference between edges weight than difference of batch size
@@ -196,8 +196,8 @@ class TestDrainer(unittest.TestCase):
         self.assertTrue(((-2 < ax_diff) & (ax_diff < 2)).all())
 
         # Drain with manual iteration management
-        imputer.stream_features()
-        drainer_1m = FiringGraphDrainer(self.ap3_fg.copy(), imputer, t=1000, p=1, q=1, batch_size=1, verbose=1)
+        server.stream_features()
+        drainer_1m = FiringGraphDrainer(self.ap3_fg.copy(), server, t=1000, p=1, q=1, batch_size=1, verbose=1)
         for _ in range(200):
             drainer_1m.drain()
             drainer_1m.reset_all()
@@ -211,11 +211,11 @@ class TestDrainer(unittest.TestCase):
 # signal can be sent even if it go through an edge that it is supposed to be removed from feedback of signal sent before
 # Using a manual iteration, we wait for the feedback of each forward signal before sending new forward signal.
 
-def create_imputer(sax_in, sax_out):
+def create_server(sax_in, sax_out):
 
-    # Create and init imputers
-    imputer = ArrayImputer(sax_in, sax_out)
-    imputer.stream_features()
+    # Create and init servers
+    server = ArrayServer(sax_in, sax_out)
+    server.stream_features()
 
-    return imputer
+    return server
 

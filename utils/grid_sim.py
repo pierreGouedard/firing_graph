@@ -3,8 +3,8 @@ from scipy.sparse import csc_matrix
 import numpy as np
 
 # Local import
-from ..core.tools.imputers import ArrayImputer
-from ..core.tools.drivers import FileDriver
+from core.tools.helpers.servers import ArrayServer
+from core.tools.helpers.drivers import FileDriver
 
 
 class GridSim(object):
@@ -12,7 +12,7 @@ class GridSim(object):
 
     def __init__(self, name):
         self.name = name
-        self.imputer = None
+        self.server = None
 
     def phi(self, omega):
         raise NotImplementedError
@@ -34,15 +34,15 @@ class GridSim(object):
 
     def stream_io_sequence(self, n, mask_target=None):
         sax_in, sax_out = self.generate_io_sequence(n, mask_target=mask_target)
-        return self.create_imputer(sax_in, sax_out)
+        return self.create_server(sax_in, sax_out)
 
-    def create_imputer(self, sax_in, sax_out):
+    def create_server(self, sax_in, sax_out):
 
-        # Create and init imputers
-        imputer = ArrayImputer(sax_in, sax_out)
-        imputer.stream_features()
+        # Create and init server
+        server = ArrayServer(sax_in, sax_out)
+        server.stream_features()
 
-        return imputer
+        return server
 
 
 class SignalPlusNoiseGrid(GridSim):

@@ -1,15 +1,14 @@
 # Global imports
 import pickle
-from scipy.sparse import csc_matrix
 
 # Local imports
 
 
-class FileImputer(object):
+class FileServer(object):
 
     def __init__(self, path_forward, path_backward, streamer, is_cyclic=True):
 
-        # Define core attribute of the file imputer
+        # Define core attribute of the file server
         self.path_forward = path_forward
         self.path_backward = path_backward
         self.streamer = streamer
@@ -43,27 +42,22 @@ class FileImputer(object):
     def load_pickle(path):
 
         with open(path, 'rb') as handle:
-            imputer = pickle.load(handle)
+            server = pickle.load(handle)
 
-        return imputer
+        return server
 
 
-class ArrayImputer(object):
+class ArrayServer(object):
 
     def __init__(self, sax_forward, sax_backward, is_cyclic=True, orient='row'):
 
-        # Define core attribute of the file imputer
+        # Define core attribute of the file server
         self.sax_forward = sax_forward
         self.sax_backward = sax_backward
         self.is_cyclic = is_cyclic
-        self.backward_flip = False
 
         # Define streaming features
         self.step, self.orient, self.step_forward, self.step_backward = None, orient, None, None
-
-    def set_backward_flip(self, backward_flip):
-        self.backward_flip = backward_flip
-        return self
 
     def stream_features(self):
         self.step_forward, self.step_backward = 0, 0
@@ -120,9 +114,6 @@ class ArrayImputer(object):
             if self.is_cyclic:
                 self.step_backward = self.step_backward % self.sax_backward.shape[-1]
 
-        if self.backward_flip:
-            sax_next = csc_matrix(~sax_next.toarray())
-
         return sax_next
 
     def save_as_pickle(self, path):
@@ -133,9 +124,9 @@ class ArrayImputer(object):
     def load_pickle(path):
 
         with open(path, 'rb') as handle:
-            imputer = pickle.load(handle)
+            server = pickle.load(handle)
 
-        return imputer
+        return server
 
 
 

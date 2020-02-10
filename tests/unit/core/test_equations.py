@@ -5,7 +5,7 @@ from scipy.sparse import csc_matrix
 
 from core.data_structure.utils import mat_from_tuples
 from core.data_structure.graph import FiringGraph
-from core.tools.imputers import ArrayImputer
+from core.tools.helpers.servers import ArrayServer
 from core.solver.drainer import FiringGraphDrainer
 
 __maintainer__ = 'Pierre Gouedard'
@@ -86,9 +86,9 @@ class TestEquations(unittest.TestCase):
 
         """
 
-        # Create imputers and drainer
-        imputer = init_imputer(self.input, self.output)
-        drainer = FiringGraphDrainer(self.fga, imputer, t=100, p=self.p, q=self.q, batch_size=self.batch_size)
+        # Create server and drainer
+        server = init_server(self.input, self.output)
+        drainer = FiringGraphDrainer(self.fga, server, t=100, p=self.p, q=self.q, batch_size=self.batch_size)
 
         # Run for Two iteration and check forward signals are as expected
         drainer.run_iteration(True, False)
@@ -104,9 +104,9 @@ class TestEquations(unittest.TestCase):
         python -m unittest tests.unit.core.test_equations.TestEquations.test_backward
 
         """
-        # Create imputers and drainer
-        imputer = init_imputer(self.input, self.output)
-        drainer = FiringGraphDrainer(self.fga, imputer, t=100, p=self.p, q=self.q, batch_size=self.batch_size)
+        # Create server and drainer
+        server = init_server(self.input, self.output)
+        drainer = FiringGraphDrainer(self.fga, server, t=100, p=self.p, q=self.q, batch_size=self.batch_size)
 
         # Run for Two iteration and check backward signals are as expected
         drainer.run_iteration(True, True)
@@ -159,9 +159,9 @@ class TestEquations(unittest.TestCase):
         python -m unittest tests.unit.core.test_equations.TestEquations.test_drain_mask
 
         """
-        # Create imputers and drainer
-        imputer = init_imputer(self.input, self.output)
-        drainer = FiringGraphDrainer(self.fgb, imputer, t=100, p=self.p, q=self.q, batch_size=self.batch_size)
+        # Create server and drainer
+        server = init_server(self.input, self.output)
+        drainer = FiringGraphDrainer(self.fgb, server, t=100, p=self.p, q=self.q, batch_size=self.batch_size)
 
         # Run for 1 epoch and check backward signals are as expected
         drainer.drain(1)
@@ -176,9 +176,9 @@ class TestEquations(unittest.TestCase):
         self.assertTrue((drainer.firing_graph.backward_firing['i'].toarray() == ax_I_track).all())
         self.assertTrue((drainer.firing_graph.Ow.toarray() == self.fga.Ow.toarray()).all())
 
-        # Create imputers and drainer
-        imputer = init_imputer(self.input, self.output)
-        drainer = FiringGraphDrainer(self.fgc, imputer, t=100, p=self.p, q=self.q, batch_size=self.batch_size)
+        # Create server and drainer
+        server = init_server(self.input, self.output)
+        drainer = FiringGraphDrainer(self.fgc, server, t=100, p=self.p, q=self.q, batch_size=self.batch_size)
 
         # Run for 1 epoch and check backward signals are as expected
         drainer.drain(1)
@@ -194,10 +194,10 @@ class TestEquations(unittest.TestCase):
         self.assertTrue((drainer.firing_graph.Iw.toarray() == self.fga.Iw.toarray()).all())
 
 
-def init_imputer(sax_input, sax_output):
+def init_server(sax_input, sax_output):
 
-    # Create and init imputers
-    imputer = ArrayImputer(sax_input, sax_output)
-    imputer.stream_features()
+    # Create and init server
+    server = ArrayServer(sax_input, sax_output)
+    server.stream_features()
 
-    return imputer
+    return server

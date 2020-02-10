@@ -5,12 +5,12 @@ from numpy import newaxis
 # Local import
 
 
-def fti(imputer, firing_graph, batch_size):
+def fti(server, firing_graph, batch_size):
     """
     Initialise the forward signal of input vertice with fresh input
 
-    :param imputer:
-    :type imputer: deyep.core.imputers.comon.Imputer
+    :param server:
+    :type server: core.imputers.ArrayServer
     :param firing_graph:
     :type firing_graph: deyep.core.data_structure.graph.FiringGraph
     :param: batch_size: size of forward batch
@@ -20,7 +20,7 @@ def fti(imputer, firing_graph, batch_size):
     """
     sax_i = csr_matrix((0, firing_graph.I.shape[0]))
     for _ in range(batch_size):
-        sax_i = vstack([sax_i, imputer.next_forward().tocsr()])
+        sax_i = vstack([sax_i, server.next_forward().tocsr()])
 
     return sax_i.astype(int)
 
@@ -104,14 +104,14 @@ def fpc(sax_c, sax_cm, ax_levels):
     return sax_c
 
 
-def fpo(sax_o, imputer, batch_size, p, q):
+def fpo(sax_o, server, batch_size, p, q):
     """
     Compute feedback from output forward signal and ground of truth of activation
 
     :param sax_o: received forward signals
     :type sax_o: scipy.sparse.spmatrix
-    :param imputer: deyep.core.imputers.comon.Imputer
-    :type imputer: scipy.sparse.spmatrix
+    :param server: core.imputers.ArrayServer
+    :type server: scipy.sparse.spmatrix
     :param batch_size:
     :type batch_size: int
     :param p:
@@ -125,7 +125,7 @@ def fpo(sax_o, imputer, batch_size, p, q):
     # Get ground of truth
     sax_got = csr_matrix((0, sax_o.shape[1]))
     for _ in range(batch_size):
-        sax_got = vstack([sax_got, imputer.next_backward().tocsr()])
+        sax_got = vstack([sax_got, server.next_backward().tocsr()])
 
     # Compute feedback
     sax_ob = ((p + q) * sax_got.multiply(sax_o > 0)) - (p * (sax_o > 0).astype(int))

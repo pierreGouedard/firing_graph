@@ -4,7 +4,7 @@ import numpy as np
 from scipy.sparse import csc_matrix, hstack
 
 # Local import
-from core.tools.imputers import ArrayImputer
+from core.tools.helpers.servers import ArrayServer
 from core.solver.sampler import SupervisedSampler
 from core.data_structure.graph import FiringGraph
 from core.data_structure.utils import create_empty_matrices
@@ -38,8 +38,8 @@ class TestSampler(unittest.TestCase):
 
         """
         # Instantiate sampler
-        imputer = init_imputer(self.sax_inputs, self.sax_outputs)
-        sampler = SupervisedSampler(imputer, self.ni, self.no, self.batch_size, self.p_sample, self.n_samples)
+        server = init_server(self.sax_inputs, self.sax_outputs)
+        sampler = SupervisedSampler(server, self.ni, self.no, self.batch_size, self.p_sample, self.n_samples)
 
         # Sample vertices
         sampler.generative_sampling()
@@ -52,9 +52,9 @@ class TestSampler(unittest.TestCase):
 
         """
         # Instantiate sampler
-        imputer = init_imputer(self.sax_inputs, self.sax_outputs)
+        server = init_server(self.sax_inputs, self.sax_outputs)
         sampler = SupervisedSampler(
-            imputer, self.ni, self.no, self.batch_size, self.p_sample, self.n_samples, patterns=self.patterns
+            server, self.ni, self.no, self.batch_size, self.p_sample, self.n_samples, patterns=self.patterns
         )
 
         # Sample vertices
@@ -76,7 +76,7 @@ class TestSampler(unittest.TestCase):
                 self.assertTrue((ax_pattern.dot(ax_signals_sampled) > 0).all())
 
 
-def init_imputer(sax_input, sax_output):
+def init_server(sax_input, sax_output):
     """
 
     :param sax_input:
@@ -84,11 +84,11 @@ def init_imputer(sax_input, sax_output):
     :return:
     """
 
-    # Create and init imputers
-    imputer = ArrayImputer(sax_input, sax_output)
-    imputer.stream_features()
+    # Create and init server
+    server = ArrayServer(sax_input, sax_output)
+    server.stream_features()
 
-    return imputer
+    return server
 
 
 def generate_pattern(n_inputs, n_outputs, index_output, l_indices):
