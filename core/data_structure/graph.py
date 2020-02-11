@@ -48,7 +48,7 @@ class FiringGraph(object):
                 matrices['Iw'].shape[0], matrices['Ow'].shape[1], matrices['Cw'].shape[0]
             )
         else:
-            self.backward_firing = {k: sax_bf.astype(uint32).tocsc() for k, sax_bf in backward_firing}
+            self.backward_firing = {k: sax_bf.astype(uint32).tocsc() for k, sax_bf in backward_firing.items()}
 
     @property
     def C(self):
