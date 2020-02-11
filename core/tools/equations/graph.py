@@ -16,12 +16,23 @@ def buo(sax_ob, sax_cm, firing_graph):
     :return: Update of adjacency matrice
     :rtype: scipy.sparse.spmatrix
     """
-    # Get strucutre update
-    sax_Ou = sax_ob.dot(sax_cm).transpose().multiply(firing_graph.O.astype(int))
-    sax_track = (sax_ob != 0).astype(int).dot(sax_cm).transpose().multiply(firing_graph.O.multiply(firing_graph.Om).astype(int))
-    firing_graph.matrices['Ow'] += sax_Ou.multiply(firing_graph.Om)
+    sax_mask = firing_graph.O.multiply(firing_graph.Om)
 
-    return sax_track.multiply(firing_graph.O.multiply(firing_graph.Om).astype(int))
+    # Get strucutre update
+    sax_Ou = sax_ob\
+        .dot(sax_cm)\
+        .transpose()\
+        .multiply(sax_mask)
+
+    sax_track = (sax_ob != 0)\
+        .astype(int)\
+        .dot(sax_cm)\
+        .transpose()\
+        .multiply(sax_mask)
+
+    firing_graph.matrices['Ow'] += sax_Ou
+
+    return sax_track
 
 
 def buc(sax_cb, sax_cm, firing_graph):
@@ -37,9 +48,21 @@ def buc(sax_cb, sax_cm, firing_graph):
     :return: update of adjacency matrix
     :rtype: scipy.sparse.spmatrix
     """
-    sax_Cu = sax_cb.dot(sax_cm).transpose().multiply(firing_graph.C.astype(int))
-    sax_track = (sax_cb != 0).astype(int).dot(sax_cm).transpose().multiply(firing_graph.C.multiply(firing_graph.Cm).astype(int))
-    firing_graph.matrices['Cw'] += sax_Cu.multiply(firing_graph.Cm)
+
+    sax_mask = firing_graph.C.multiply(firing_graph.Cm)
+
+    sax_Cu = sax_cb\
+        .dot(sax_cm)\
+        .transpose()\
+        .multiply(sax_mask)
+
+    sax_track = (sax_cb != 0)\
+        .astype(int)\
+        .dot(sax_cm)\
+        .transpose()\
+        .multiply(sax_mask)
+
+    firing_graph.matrices['Cw'] += sax_Cu
 
     return sax_track
 
@@ -57,8 +80,20 @@ def bui(sax_cb, sax_im, firing_graph):
     :return: update of adjacency matrix
     :rtype: scipy.sparse.spmatrix
     """
-    sax_Iu = sax_cb.dot(sax_im).transpose().multiply(firing_graph.I.astype(int))
-    sax_track = (sax_cb != 0).astype(int).dot(sax_im).transpose().multiply(firing_graph.I.multiply(firing_graph.Im).astype(int))
-    firing_graph.matrices['Iw'] += sax_Iu.multiply(firing_graph.Im)
+
+    sax_mask = firing_graph.I.multiply(firing_graph.Im)
+
+    sax_Iu = sax_cb\
+        .dot(sax_im)\
+        .transpose()\
+        .multiply(sax_mask)
+
+    sax_track = (sax_cb != 0)\
+        .astype(int)\
+        .dot(sax_im)\
+        .transpose()\
+        .multiply(sax_mask)
+
+    firing_graph.matrices['Iw'] += sax_Iu
 
     return sax_track

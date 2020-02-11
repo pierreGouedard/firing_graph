@@ -1,6 +1,6 @@
 # Global imports
 import numpy as np
-from scipy.sparse import diags, lil_matrix, hstack, vstack
+from scipy.sparse import diags, lil_matrix, csc_matrix, csr_matrix, hstack, vstack
 
 
 def mat_from_tuples(ni, no, nc, l_edges, weights):
@@ -106,6 +106,46 @@ def gather_matrices(ax_in, ax_core, ax_out):
     return ax_fg
 
 
+def set_matrices_spec(d_matrices, write_mode=True):
+    set_matrices_type(d_matrices)
+    set_matrices_format(d_matrices, write_mode)
+
+
+def set_matrices_type(d_matrices):
+
+    d_matrices.update({
+        'Iw': d_matrices['Iw'].astype(np.int32),
+        'Cw': d_matrices['Cw'].astype(np.int32),
+        'Ow': d_matrices['Ow'].astype(np.int32),
+        'Im': d_matrices['Im'].astype(bool),
+        'Cm': d_matrices['Cm'].astype(bool),
+        'Om': d_matrices['Om'].astype(bool),
+    })
+
+
+def set_matrices_format(d_matrices, write_mode=True):
+
+    d_matrices.update({
+        'Im': d_matrices['Im'].tolil(),
+        'Cm': d_matrices['Cm'].tolil(),
+        'Om': d_matrices['Om'].tolil(),
+    })
+
+    if write_mode:
+        d_matrices.update({
+            'Iw': d_matrices['Iw'].tolil(),
+            'Cw': d_matrices['Cw'].tolil(),
+            'Ow': d_matrices['Ow'].tolil(),
+        })
+
+    else:
+        d_matrices.update({
+            'Iw': d_matrices['Iw'].tocsc(),
+            'Cw': d_matrices['Cw'].tocsc(),
+            'Ow': d_matrices['Ow'].tocsc(),
+        })
+
+
 def reduce_backward_firing(d_backward_firing, l_indices):
     return {
         'i': d_backward_firing['i'][:, l_indices], 'o': d_backward_firing['o'][l_indices, :],
@@ -113,24 +153,37 @@ def reduce_backward_firing(d_backward_firing, l_indices):
     }
 
 
-def create_empty_backward_firing(n_inputs, n_outputs, n_core):
+def create_empty_backward_firing(n_inputs, n_outputs, n_core, dtype=np.uint32):
     return {
-        'i': lil_matrix((n_inputs, n_core)),
-        'c': lil_matrix((n_core, n_core)),
-        'o': lil_matrix((n_core, n_outputs)),
+        'i': csc_matrix((n_inputs, n_core), dtype=dtype),
+        'c': csc_matrix((n_core, n_core), dtype=dtype),
+        'o': csc_matrix((n_core, n_outputs), dtype=dtype),
     }
 
 
-def create_empty_matrices(n_inputs, n_outputs, n_core):
+def create_empty_matrices(n_inputs, n_outputs, n_core, write_mode=True):
 
-    return {
-        'Im': lil_matrix((n_inputs, n_core)),
-        'Cm': lil_matrix((n_core, n_core)),
-        'Om': lil_matrix((n_core, n_outputs)),
-        'Iw': lil_matrix((n_inputs, n_core)),
-        'Cw': lil_matrix((n_core, n_core)),
-        'Ow': lil_matrix((n_core, n_outputs))
+    d_matrices = {
+            'Im': lil_matrix((n_inputs, n_core), dtype=bool),
+            'Cm': lil_matrix((n_core, n_core), dtype=bool),
+            'Om': lil_matrix((n_core, n_outputs), dtype=bool)
     }
+
+    if write_mode:
+        d_matrices.update({
+            'Iw': lil_matrix((n_inputs, n_core)),
+            'Cw': lil_matrix((n_core, n_core)),
+            'Ow': lil_matrix((n_core, n_outputs))
+        })
+
+    else:
+        d_matrices.update({
+            'Iw': csc_matrix((n_inputs, n_core)),
+            'Cw': csc_matrix((n_core, n_core)),
+            'Ow': csc_matrix((n_core, n_outputs))
+        })
+
+    return d_matrices
 
 
 def reduce_matrices(d_matrices, l_indices):
@@ -142,43 +195,53 @@ def reduce_matrices(d_matrices, l_indices):
     }
 
 
-def augment_matrices(d_matrices_a, d_matrices_b):
+def augment_matrices(d_matrices_a, d_matrices_b, write_mode=True):
 
     # make sure dimension match
     assert d_matrices_a['Iw'].shape[0] == d_matrices_b['Iw'].shape[0], "shape of inputs matrices doesn't match"
     assert d_matrices_a['Ow'].shape[1] == d_matrices_b['Ow'].shape[1], "shape of outputs matrices doesn't match"
 
     # Merge Core matrices
-    sax_Cw_upper = hstack([d_matrices_a['Cw'], lil_matrix((d_matrices_a['Cw'].shape[0], d_matrices_b['Cw'].shape[1]))])
-    sax_Cw_lower = hstack([lil_matrix((d_matrices_b['Cw'].shape[0], d_matrices_a['Cw'].shape[0])), d_matrices_b['Cw']])
+    sax_Cw_upper = hstack([d_matrices_a['Cw'], csc_matrix((d_matrices_a['Cw'].shape[0], d_matrices_b['Cw'].shape[1]))])
+    sax_Cw_lower = hstack([csc_matrix((d_matrices_b['Cw'].shape[0], d_matrices_a['Cw'].shape[0])), d_matrices_b['Cw']])
 
-    sax_Cm_upper = hstack([d_matrices_a['Cm'], lil_matrix((d_matrices_a['Cm'].shape[0], d_matrices_b['Cm'].shape[1]))])
-    sax_Cm_lower = hstack([lil_matrix((d_matrices_b['Cm'].shape[0], d_matrices_a['Cm'].shape[0])), d_matrices_b['Cm']])
+    sax_Cm_upper = hstack([d_matrices_a['Cm'], csc_matrix((d_matrices_a['Cm'].shape[0], d_matrices_b['Cm'].shape[1]))])
+    sax_Cm_lower = hstack([csc_matrix((d_matrices_b['Cm'].shape[0], d_matrices_a['Cm'].shape[0])), d_matrices_b['Cm']])
 
-    return {
-        'Iw': hstack([d_matrices_a['Iw'], d_matrices_b['Iw']]).tolil(),
-        'Im': hstack([d_matrices_a['Im'], d_matrices_b['Im']]).tolil(),
-        'Ow': vstack([d_matrices_a['Ow'], d_matrices_b['Ow']]).tolil(),
-        'Om': vstack([d_matrices_a['Om'], d_matrices_b['Om']]).tolil(),
-        'Cw': vstack([sax_Cw_upper, sax_Cw_lower]).tolil(),
-        'Cm': vstack([sax_Cm_upper, sax_Cm_lower]).tolil()
+    d_matrices = {
+        'Im': hstack([d_matrices_a['Im'], d_matrices_b['Im']]),
+        'Om': vstack([d_matrices_a['Om'], d_matrices_b['Om']]),
+        'Cm': vstack([sax_Cm_upper, sax_Cm_lower]),
+        'Iw': hstack([d_matrices_a['Iw'], d_matrices_b['Iw']]),
+        'Ow': vstack([d_matrices_a['Ow'], d_matrices_b['Ow']]),
+        'Cw': vstack([sax_Cw_upper, sax_Cw_lower]),
     }
 
+    if write_mode is not None:
+        set_matrices_format(d_matrices, write_mode)
 
-def add_core_vertices(d_matrices, n_core, offset):
+    return d_matrices
+
+
+def add_core_vertices(d_matrices, n_core, offset, write_mode=True):
 
     # Get I/O dimensions
     n_inputs, n_outputs = d_matrices['Iw'].shape[0], d_matrices['Ow'].shape[1]
 
     # Update core matrices
-    sax_Cw_upper= hstack([d_matrices['Cw'][:offset, :offset], lil_matrix((offset, n_core))])
-    sax_Cm_upper = hstack([d_matrices['Cm'][:offset, :offset], lil_matrix((offset, n_core))])
+    sax_Cw_upper= hstack([d_matrices['Cw'][:offset, :offset], csc_matrix((offset, n_core))])
+    sax_Cm_upper = hstack([d_matrices['Cm'][:offset, :offset], csc_matrix((offset, n_core))])
 
-    return {
-        'Iw': hstack([d_matrices['Iw'][:, :offset], lil_matrix((n_inputs, n_core))]).tolil(),
-        'Im': hstack([d_matrices['Im'][:, :offset], lil_matrix((n_inputs, n_core))]).tolil(),
-        'Ow': vstack([d_matrices['Ow'][:, :offset], lil_matrix((n_core, n_outputs))]).tolil(),
-        'Om': vstack([d_matrices['Om'][:, :offset], lil_matrix((n_core, n_outputs))]).tolil(),
-        'Cw': vstack([sax_Cw_upper, lil_matrix((n_core, sax_Cw_upper.shape[1]))]).tolil(),
-        'Cm': vstack([sax_Cm_upper, lil_matrix((n_core, sax_Cm_upper.shape[1]))]).tolil()
+    d_matrices = {
+        'Iw': hstack([d_matrices['Iw'][:, :offset], csc_matrix((n_inputs, n_core))]),
+        'Im': hstack([d_matrices['Im'][:, :offset], csc_matrix((n_inputs, n_core))]),
+        'Ow': vstack([d_matrices['Ow'][:, :offset], csr_matrix((n_core, n_outputs))]),
+        'Om': vstack([d_matrices['Om'][:, :offset], csr_matrix((n_core, n_outputs))]),
+        'Cw': vstack([sax_Cw_upper, csr_matrix((n_core, sax_Cw_upper.shape[1]))]),
+        'Cm': vstack([sax_Cm_upper, csr_matrix((n_core, sax_Cm_upper.shape[1]))])
     }
+
+    if write_mode is not None:
+        set_matrices_format(d_matrices, write_mode)
+
+    return d_matrices

@@ -4,7 +4,7 @@ import random
 import string
 from scipy.sparse import lil_matrix, csc_matrix, hstack, vstack
 import copy
-from numpy import array
+from numpy import uint32
 
 # Local import
 from ..data_structure import utils
@@ -29,21 +29,26 @@ class FiringGraph(object):
         self.graph_id = graph_id
         self.is_drained = is_drained
 
-        # Parameter
+        # architecture core params
         self.depth = depth
         self.levels = ax_levels
+
+        # force format and type of matrices
+        utils.set_matrices_spec(matrices, write_mode=False)
         self.matrices = matrices
+
+        # set additional (optional) util attribute
         self.partitions = partitions
         self.drainer_params = drainer_params if drainer_params is not None else {}
         self.precision = precision
 
-        # Tracking
+        # Set backward tracking matrices
         if backward_firing is None:
             self.backward_firing = utils.create_empty_backward_firing(
                 matrices['Iw'].shape[0], matrices['Ow'].shape[1], matrices['Cw'].shape[0]
             )
         else:
-            self.backward_firing = backward_firing
+            self.backward_firing = {k: sax_bf.astype(uint32).tocsc() for k, sax_bf in backward_firing}
 
     @property
     def C(self):
@@ -86,13 +91,13 @@ class FiringGraph(object):
         assert key in ['I', 'C', 'O'], "Key should be in {}".format(['I', 'C', 'O'])
 
         if key == 'I':
-            self.backward_firing['i'] += sax_M
+            self.backward_firing['i'] += sax_M.astype(self.backward_firing['i'].dtype)
 
         elif key == 'C':
-            self.backward_firing['c'] += sax_M
+            self.backward_firing['c'] += sax_M.astype(self.backward_firing['c'].dtype)
 
         elif key == 'O':
-            self.backward_firing['o'] += sax_M
+            self.backward_firing['o'] += sax_M.astype(self.backward_firing['o'].dtype)
 
     def update_mask(self, t):
         if self.matrices['Im'].nnz > 0:

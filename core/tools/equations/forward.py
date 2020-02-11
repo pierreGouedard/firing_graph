@@ -87,8 +87,6 @@ def fpc(sax_c, sax_cm, ax_levels):
     :type sax_cm: scipy.sparse.spmatrix or None
     :param ax_levels: levels of forward vertex
     :type ax_levels: numpy.array
-    :param update_memory: wether or not to update sax_cm
-    :type update_memory: bool
     :return: new forward memory
     :rtype: scipy.sparse.spmatrix
     """
