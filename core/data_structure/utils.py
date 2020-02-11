@@ -125,14 +125,11 @@ def set_matrices_type(d_matrices):
 
 def set_matrices_format(d_matrices, write_mode=True):
 
-    d_matrices.update({
-        'Im': d_matrices['Im'].tolil(),
-        'Cm': d_matrices['Cm'].tolil(),
-        'Om': d_matrices['Om'].tolil(),
-    })
-
     if write_mode:
         d_matrices.update({
+            'Im': d_matrices['Im'].tolil(),
+            'Cm': d_matrices['Cm'].tolil(),
+            'Om': d_matrices['Om'].tolil(),
             'Iw': d_matrices['Iw'].tolil(),
             'Cw': d_matrices['Cw'].tolil(),
             'Ow': d_matrices['Ow'].tolil(),
@@ -140,6 +137,9 @@ def set_matrices_format(d_matrices, write_mode=True):
 
     else:
         d_matrices.update({
+            'Im': d_matrices['Im'].tocsc(),
+            'Cm': d_matrices['Cm'].tocsc(),
+            'Om': d_matrices['Om'].tocsc(),
             'Iw': d_matrices['Iw'].tocsc(),
             'Cw': d_matrices['Cw'].tocsc(),
             'Ow': d_matrices['Ow'].tocsc(),
@@ -163,25 +163,25 @@ def create_empty_backward_firing(n_inputs, n_outputs, n_core, dtype=np.uint32):
 
 def create_empty_matrices(n_inputs, n_outputs, n_core, write_mode=True):
 
-    d_matrices = {
+    if write_mode:
+        d_matrices = {
             'Im': lil_matrix((n_inputs, n_core), dtype=bool),
             'Cm': lil_matrix((n_core, n_core), dtype=bool),
-            'Om': lil_matrix((n_core, n_outputs), dtype=bool)
-    }
-
-    if write_mode:
-        d_matrices.update({
+            'Om': lil_matrix((n_core, n_outputs), dtype=bool),
             'Iw': lil_matrix((n_inputs, n_core)),
             'Cw': lil_matrix((n_core, n_core)),
             'Ow': lil_matrix((n_core, n_outputs))
-        })
+        }
 
     else:
-        d_matrices.update({
+        d_matrices = {
+            'Im': csc_matrix((n_inputs, n_core), dtype=bool),
+            'Cm': csc_matrix((n_core, n_core), dtype=bool),
+            'Om': csc_matrix((n_core, n_outputs), dtype=bool),
             'Iw': csc_matrix((n_inputs, n_core)),
             'Cw': csc_matrix((n_core, n_core)),
             'Ow': csc_matrix((n_core, n_outputs))
-        })
+        }
 
     return d_matrices
 

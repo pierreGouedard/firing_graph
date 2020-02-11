@@ -1,7 +1,7 @@
 # Global imports
 import unittest
 import numpy as np
-from scipy.sparse import csc_matrix, lil_matrix
+from scipy.sparse import csc_matrix
 
 # Local import
 from core.data_structure.utils import mat_from_tuples
@@ -60,9 +60,9 @@ class TestBuilder(unittest.TestCase):
         self.assertTrue(isinstance(firing_graph.Iw, csc_matrix) and firing_graph.Iw.dtype.type == np.int32)
         self.assertTrue(isinstance(firing_graph.Cw, csc_matrix) and firing_graph.Cw.dtype.type == np.int32)
         self.assertTrue(isinstance(firing_graph.Ow, csc_matrix) and firing_graph.Ow.dtype.type == np.int32)
-        self.assertTrue(isinstance(firing_graph.Im, lil_matrix) and firing_graph.Im.dtype.type == np.bool_)
-        self.assertTrue(isinstance(firing_graph.Cm, lil_matrix) and firing_graph.Cm.dtype.type == np.bool_)
-        self.assertTrue(isinstance(firing_graph.Om, lil_matrix) and firing_graph.Om.dtype.type == np.bool_)
+        self.assertTrue(isinstance(firing_graph.Im, csc_matrix) and firing_graph.Im.dtype.type == np.bool_)
+        self.assertTrue(isinstance(firing_graph.Cm, csc_matrix) and firing_graph.Cm.dtype.type == np.bool_)
+        self.assertTrue(isinstance(firing_graph.Om, csc_matrix) and firing_graph.Om.dtype.type == np.bool_)
 
         # Assert tracking dtypes and format are correct
         self.assertTrue(isinstance(firing_graph.backward_firing['i'], csc_matrix))

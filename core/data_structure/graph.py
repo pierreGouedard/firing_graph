@@ -101,20 +101,26 @@ class FiringGraph(object):
 
     def update_mask(self, t):
         if self.matrices['Im'].nnz > 0:
-            self.matrices['Im'] = self.clip_firing(self.matrices['Im'].multiply(self.I), self.backward_firing['i'], t)
+            self.matrices['Im'] = self.matrices['Im'].multiply(self.I)
+            if t > 0:
+                self.matrices['Im'] = self.clip_firing(self.matrices['Im'].tolil(), self.backward_firing['i'], t)
 
         if self.matrices['Cm'].nnz > 0:
-            self.matrices['Cm'] = self.clip_firing(self.matrices['Cm'].multiply(self.C), self.backward_firing['c'], t)
+            self.matrices['Cm'] = self.matrices['Cm'].multiply(self.C)
+            if t > 0:
+                self.matrices['Cm'] = self.clip_firing(self.matrices['Cm'], self.backward_firing['c'], t)
 
         if self.matrices['Om'].nnz > 0:
-            self.matrices['Om'] = self.clip_firing(self.matrices['Om'].multiply(self.O), self.backward_firing['o'], t)
+            self.matrices['Om'] = self.matrices['Om'].multiply(self.O)
+            if t > 0:
+                self.matrices['Om'] = self.clip_firing(self.matrices['Om'], self.backward_firing['o'], t)
 
     @staticmethod
     def clip_firing(sax_mask, sax_bf, t):
         for i, j in zip(*sax_mask.nonzero()):
             if sax_bf[i, j] >= t:
                 sax_mask[i, j] = False
-        return sax_mask
+        return sax_mask.tocsc()
 
     @staticmethod
     def load_pickle(path):
