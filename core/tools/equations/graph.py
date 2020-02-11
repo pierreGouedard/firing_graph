@@ -20,15 +20,16 @@ def buo(sax_ob, sax_cm, firing_graph):
 
     # Get strucutre update
     sax_Ou = sax_ob\
-        .dot(sax_cm)\
+        .astype(firing_graph.Ow.dtype)\
+        .dot(sax_cm.astype(firing_graph.Ow.dtype))\
         .transpose()\
-        .multiply(sax_mask)
+        .multiply(sax_mask.astype(firing_graph.Ow.dtype))
 
     sax_track = (sax_ob != 0)\
-        .astype(int)\
-        .dot(sax_cm)\
+        .astype(firing_graph.backward_firing['o'].dtype)\
+        .dot(sax_cm.astype(firing_graph.backward_firing['o'].dtype))\
         .transpose()\
-        .multiply(sax_mask)
+        .multiply(sax_mask.astype(firing_graph.backward_firing['o'].dtype))
 
     firing_graph.matrices['Ow'] += sax_Ou
 
@@ -52,15 +53,16 @@ def buc(sax_cb, sax_cm, firing_graph):
     sax_mask = firing_graph.C.multiply(firing_graph.Cm)
 
     sax_Cu = sax_cb\
-        .dot(sax_cm)\
+        .astype(firing_graph.Cw.dtype)\
+        .dot(sax_cm.astype(firing_graph.Cw.dtype))\
         .transpose()\
-        .multiply(sax_mask)
+        .multiply(sax_mask.astype(firing_graph.Cw.dtype))
 
     sax_track = (sax_cb != 0)\
-        .astype(int)\
-        .dot(sax_cm)\
+        .astype(firing_graph.backward_firing['c'].dtype)\
+        .dot(sax_cm.astype(firing_graph.backward_firing['c'].dtype))\
         .transpose()\
-        .multiply(sax_mask)
+        .multiply(sax_mask.astype(firing_graph.backward_firing['c'].dtype))
 
     firing_graph.matrices['Cw'] += sax_Cu
 
@@ -84,15 +86,16 @@ def bui(sax_cb, sax_im, firing_graph):
     sax_mask = firing_graph.I.multiply(firing_graph.Im)
 
     sax_Iu = sax_cb\
-        .dot(sax_im)\
+        .astype(firing_graph.Iw.dtype)\
+        .dot(sax_im.astype(firing_graph.Iw.dtype))\
         .transpose()\
-        .multiply(sax_mask)
+        .multiply(sax_mask.astype(firing_graph.Iw.dtype))
 
     sax_track = (sax_cb != 0)\
-        .astype(int)\
-        .dot(sax_im)\
+        .astype(firing_graph.backward_firing['i'].dtype)\
+        .dot(sax_im.astype(firing_graph.backward_firing['i'].dtype))\
         .transpose()\
-        .multiply(sax_mask)
+        .multiply(sax_mask.astype(firing_graph.backward_firing['i'].dtype))
 
     firing_graph.matrices['Iw'] += sax_Iu
 

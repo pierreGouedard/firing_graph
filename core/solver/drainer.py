@@ -29,7 +29,13 @@ class FiringGraphDrainer(object):
         # Init signals
         self.sax_i, self.sax_c, self.sax_o = init_forward_signal(self.firing_graph, self.bs)
         self.sax_im, self.sax_cm = init_forward_memory(self.firing_graph, self.bs)
-        self.sax_cb, self.sax_ob = init_backward_signal(self.firing_graph, self.bs)
+        self.sax_cb, self.sax_ob = init_backward_signal(self.firing_graph, self.bs, p=self.p, q=self.q)
+
+        # set dtypes of server
+        self.server.dtype_forward = self.sax_i.dtype
+        self.server.dtype_backward = self.sax_cb.dtype
+
+        # Init iteration count
         self.iter = 0
 
     def reset_all(self, server=False):
@@ -45,11 +51,11 @@ class FiringGraphDrainer(object):
         self.server.stream_features()
 
     def reset_forward(self):
-        self.sax_i, self.sax_c, self.sax_o = init_forward_signal(self.firing_graph, self.bs)
-        self.sax_im, self.sax_cm = init_forward_memory(self.firing_graph, self.bs)
+        self.sax_i, self.sax_c, self.sax_o = init_forward_signal(self.firing_graph, self.bs, self.server.dtype_forward)
+        self.sax_im, self.sax_cm = init_forward_memory(self.firing_graph, self.bs, self.server.dtype_forward)
 
     def reset_backward(self):
-        self.sax_cb, self.sax_ob = init_backward_signal(self.firing_graph, self.bs)
+        self.sax_cb, self.sax_ob = init_backward_signal(self.firing_graph, self.bs, self.server.dtype_backward)
 
     def drain_all(self, n_max=10000, adapt_bs=False):
 
@@ -143,7 +149,7 @@ class FiringGraphDrainer(object):
         if load_input:
             self.sax_i = fti(self.server, self.firing_graph, self.bs)
         else:
-            self.sax_i = csr_matrix((self.bs, self.firing_graph.I.shape[0]), dtype=int)
+            self.sax_i = csr_matrix((self.bs, self.firing_graph.I.shape[0]), dtype=self.sax_i.dtype)
 
         # Output transmit
         self.sax_o = fto(self.firing_graph.O, self.sax_c)
@@ -162,7 +168,7 @@ class FiringGraphDrainer(object):
             self.sax_ob = fpo(self.sax_o, self.server, self.bs, self.p, self.q)
 
         else:
-            self.sax_ob = csc_matrix((self.firing_graph.O.shape[1], self.bs), dtype=int)
+            self.sax_ob = csc_matrix((self.firing_graph.O.shape[1], self.bs), dtype=self.sax_ob.dtype)
 
     def backward_transmiting(self):
 
@@ -199,30 +205,74 @@ def get_mem_size(batch_size, depth):
     return batch_size + ((depth - 1) * 2 * batch_size + batch_size)
 
 
-def init_forward_signal(fg, batch_size):
-    sax_i = csc_matrix((batch_size, fg.I.shape[0]), dtype=int)
-    sax_c = csc_matrix((batch_size, fg.C.shape[0]), dtype=int)
-    sax_o = csc_matrix((batch_size, fg.O.shape[1]), dtype=int)
+def init_forward_signal(fg, batch_size, dtype=None):
+
+    if dtype is None:
+        dtype = set_forward_type(fg)
+
+    sax_i = csc_matrix((batch_size, fg.I.shape[0]), dtype=dtype)
+    sax_c = csc_matrix((batch_size, fg.C.shape[0]), dtype=dtype)
+    sax_o = csc_matrix((batch_size, fg.O.shape[1]), dtype=dtype)
+
     return sax_i, sax_c, sax_o
 
 
-def init_forward_memory(fg, batch_size):
+def init_forward_memory(fg, batch_size, dtype=None):
+
+    if dtype is None:
+        dtype = set_forward_type(fg)
+
     # Get memory size needed
     mem_size = get_mem_size(batch_size, fg.depth)
 
     # Init memory signals
-    sax_im = csr_matrix((mem_size, fg.I.shape[0]), dtype=int)
-    sax_cm = csr_matrix((mem_size, fg.C.shape[0]), dtype=int)
+    sax_im = csr_matrix((mem_size, fg.I.shape[0]), dtype=dtype)
+    sax_cm = csr_matrix((mem_size, fg.C.shape[0]), dtype=dtype)
 
     return sax_im, sax_cm
 
 
-def init_backward_signal(fg, batch_size):
+def init_backward_signal(fg, batch_size, dtype=None, p=None, q=None):
+
+    if dtype is None:
+        dtype = set_backward_type(fg, p, q)
+
     # Get memory size needed
     mem_size = get_mem_size(batch_size, fg.depth)
 
     # Init backward signals
-    sax_cb = csc_matrix((fg.C.shape[0], mem_size), dtype=int)
-    sax_ob = csc_matrix((fg.O.shape[1], mem_size), dtype=int)
+    sax_cb = csc_matrix((fg.C.shape[0], mem_size), dtype=dtype)
+    sax_ob = csc_matrix((fg.O.shape[1], mem_size), dtype=dtype)
 
     return sax_cb, sax_ob
+
+
+def set_forward_type(fg):
+    max_value = max([fg.I.sum(axis=0).max(), fg.C.sum(axis=0).max(), fg.O.sum(axis=0).max()])
+    if max_value < np.iinfo(np.uint8).max:
+        dtype = np.uint8
+
+    elif max_value < np.iinfo(np.uint16).max:
+        dtype = np.uint16
+
+    else:
+        dtype = np.uint32
+
+    return dtype
+
+
+def set_backward_type(fg, p, q):
+
+    max_outcoming = max([fg.I.sum(axis=1).max(), fg.C.sum(axis=1).max(), fg.O.sum(axis=1).max()])
+    max_value, min_value = max_outcoming * q, max_outcoming * -1 * p
+
+    if max_value < np.iinfo(np.int8).max and min_value > np.iinfo(np.int8).min:
+        dtype = np.int8
+
+    elif max_value < np.iinfo(np.int16).max and min_value > np.iinfo(np.int16).min:
+        dtype = np.int16
+
+    else:
+        dtype = np.int32
+
+    return dtype

@@ -18,11 +18,11 @@ def fti(server, firing_graph, batch_size):
     :return: Forward signal of input vertice
     :rtype: scipy.sparse.spmatrix
     """
-    sax_i = csr_matrix((0, firing_graph.I.shape[0]))
+    sax_i = csr_matrix((0, firing_graph.I.shape[0]), dtype=server.dtype_forward)
     for _ in range(batch_size):
         sax_i = vstack([sax_i, server.next_forward().tocsr()])
 
-    return sax_i.astype(int)
+    return sax_i
 
 
 def ftc(sax_C, sax_I, sax_c, sax_i):
@@ -72,7 +72,11 @@ def fpi(sax_i, sax_im):
     :return: new forward memory
     :rtype: scipy.sparse.spmatrix
     """
-    sax_im = vstack([csr_matrix(sax_i.shape), sax_i, sax_im[sax_i.shape[0]:sax_im.shape[0] - sax_i.shape[0], :]])
+    sax_im = vstack([
+        csr_matrix(sax_i.shape, dtype=sax_i.dtype),
+        sax_i,
+        sax_im[sax_i.shape[0]:sax_im.shape[0] - sax_i.shape[0], :]
+    ])
 
     return sax_im
 
@@ -92,7 +96,7 @@ def fpc(sax_c, sax_cm, ax_levels):
     """
     # Compare forward strength to level for activation
     sax_levels = csc_matrix((ax_levels - 1).clip(min=0)[newaxis, :].repeat(sax_c.shape[0], axis=0))
-    sax_c = (sax_c - sax_levels > 0).astype(int)
+    sax_c = (sax_c.astype(int) - sax_levels > 0).astype(sax_c.dtype)
 
     # Get forward signal
     if sax_cm is not None:
@@ -121,11 +125,12 @@ def fpo(sax_o, server, batch_size, p, q):
     """
 
     # Get ground of truth
-    sax_got = csr_matrix((0, sax_o.shape[1]))
+    sax_got = csr_matrix((0, sax_o.shape[1]), dtype=server.dtype_backward)
     for _ in range(batch_size):
         sax_got = vstack([sax_got, server.next_backward().tocsr()])
 
     # Compute feedback
-    sax_ob = ((p + q) * sax_got.multiply(sax_o > 0)) - (p * (sax_o > 0).astype(int))
+    sax_ob = (p + q) * sax_got.tocsc().multiply((sax_o > 0).astype(sax_got.dtype))
+    sax_ob -= p * (sax_o > 0).astype(sax_got.dtype)
 
-    return sax_ob.transpose().tocsc()
+    return sax_ob.transpose()

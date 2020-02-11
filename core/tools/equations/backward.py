@@ -19,7 +19,7 @@ def btc(sax_ob, sax_cb, sax_cm, sax_O, sax_C):
     """
 
     sax_cb = sax_O.dot(sax_ob) + sax_C.dot(sax_cb)
-    sax_cb = sax_cb.multiply(sax_cm.transpose())
+    sax_cb = sax_cb.multiply(sax_cm.transpose().astype(sax_cb.dtype))
     return sax_cb
 
 
@@ -36,12 +36,12 @@ def bpo(sax_ob, mem_size, batch_size):
     :return: backward signal
     :rtype scipy.sparse.spmatrix
     """
-    sax_ob = hstack(
-        [csc_matrix((sax_ob.shape[0], batch_size)),
-         sax_ob,
-         csc_matrix((sax_ob.shape[0], mem_size - 2 * batch_size))
-         ]
-    )
+    sax_ob = hstack([
+        csc_matrix((sax_ob.shape[0], batch_size), dtype=sax_ob.dtype),
+        sax_ob,
+        csc_matrix((sax_ob.shape[0], mem_size - 2 * batch_size), dtype=sax_ob.dtype)
+    ])
+
     return sax_ob
 
 
@@ -56,9 +56,8 @@ def bpc(sax_cb, batch_size):
     :return: offset backward signal
     :rtype: scipy.sparse.spmatrix
     """
-    sax_cb = hstack(
-        [csc_matrix((sax_cb.shape[0], 2 * batch_size)),
-         sax_cb[:, :sax_cb.shape[1] - 2 * batch_size]
-         ]
-    )
+    sax_cb = hstack([
+        csc_matrix((sax_cb.shape[0], 2 * batch_size), dtype=sax_cb.dtype),
+        sax_cb[:, :sax_cb.shape[1] - 2 * batch_size]
+    ])
     return sax_cb
