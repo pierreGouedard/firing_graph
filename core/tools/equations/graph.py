@@ -21,13 +21,13 @@ def buo(sax_ob, sax_cm, firing_graph):
     # Get strucutre update
     sax_Ou = sax_ob\
         .astype(firing_graph.Ow.dtype)\
-        .dot(sax_cm.astype(firing_graph.Ow.dtype))\
+        .dot(sax_cm)\
         .transpose()\
-        .multiply(sax_mask.astype(firing_graph.Ow.dtype))
+        .multiply(sax_mask)
 
     sax_track = (sax_ob != 0)\
         .astype(firing_graph.backward_firing['o'].dtype)\
-        .dot(sax_cm.astype(firing_graph.backward_firing['o'].dtype))\
+        .dot(sax_cm)\
         .transpose()\
         .multiply(sax_mask.astype(firing_graph.backward_firing['o'].dtype))
 
@@ -54,9 +54,9 @@ def buc(sax_cb, sax_cm, firing_graph):
 
     sax_Cu = sax_cb\
         .astype(firing_graph.Cw.dtype)\
-        .dot(sax_cm.astype(firing_graph.Cw.dtype))\
+        .dot(sax_cm)\
         .transpose()\
-        .multiply(sax_mask.astype(firing_graph.Cw.dtype))
+        .multiply(sax_mask)
 
     sax_track = (sax_cb != 0)\
         .astype(firing_graph.backward_firing['c'].dtype)\
@@ -87,13 +87,13 @@ def bui(sax_cb, sax_im, firing_graph):
 
     sax_Iu = sax_cb\
         .astype(firing_graph.Iw.dtype)\
-        .dot(sax_im.astype(firing_graph.Iw.dtype))\
+        .dot(sax_im)\
         .transpose()\
-        .multiply(sax_mask.astype(firing_graph.Iw.dtype))
+        .multiply(sax_mask)
 
     sax_track = (sax_cb != 0)\
         .astype(firing_graph.backward_firing['i'].dtype)\
-        .dot(sax_im.astype(firing_graph.backward_firing['i'].dtype))\
+        .dot(sax_im)\
         .transpose()\
         .multiply(sax_mask.astype(firing_graph.backward_firing['i'].dtype))
 

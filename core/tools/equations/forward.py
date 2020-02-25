@@ -18,9 +18,7 @@ def fti(server, firing_graph, batch_size):
     :return: Forward signal of input vertice
     :rtype: scipy.sparse.spmatrix
     """
-    sax_i = csr_matrix((0, firing_graph.I.shape[0]), dtype=server.dtype_forward)
-    for _ in range(batch_size):
-        sax_i = vstack([sax_i, server.next_forward().tocsr()])
+    sax_i = server.next_forward(n=batch_size)
 
     return sax_i
 
@@ -124,13 +122,11 @@ def fpo(sax_o, server, batch_size, p, q):
     :rtype: scipy.sparse.spmatrix
     """
 
-    # Get ground of truth
-    sax_got = csr_matrix((0, sax_o.shape[1]), dtype=server.dtype_backward)
-    for _ in range(batch_size):
-        sax_got = vstack([sax_got, server.next_backward().tocsr()])
+    # Get got signal
+    sax_got, sax_o = server.next_backward(sax_o, n=batch_size)
 
-    # Compute feedback
-    sax_ob = (p + q) * sax_got.tocsc().multiply((sax_o > 0).astype(sax_got.dtype))
-    sax_ob -= p * (sax_o > 0).astype(sax_got.dtype)
+    # Compute feedback signal
+    sax_ob = (p + q) * sax_got.tocsc().multiply(sax_o)
+    sax_ob -= p * sax_o
 
     return sax_ob.transpose()

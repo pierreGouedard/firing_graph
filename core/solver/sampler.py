@@ -49,11 +49,8 @@ class SupervisedSampler(object):
         Read in a sparse matrices input and output grid state.
         :return: tuple of input and output sparse grid activation's matrices
         """
-        sax_i, sax_o = csr_matrix((0, self.n_inputs), dtype=bool), csr_matrix((0, self.n_outputs), dtype=bool)
-
-        for _ in range(self.n_batch):
-            sax_i = vstack([sax_i, self.server.next_forward().tocsr()])
-            sax_o = vstack([sax_o, self.server.next_backward().tocsr()])
+        sax_i = self.server.next_forward(n=self.n_batch)
+        sax_o = self.server.next_backward(n=self.n_batch)
 
         return sax_i, sax_o
 

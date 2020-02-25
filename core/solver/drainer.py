@@ -84,7 +84,6 @@ class FiringGraphDrainer(object):
         return self
 
     def drain(self, n=1):
-
         early_stopping, j = False, 0
         while j < n:
             self.run_iteration(True, True)
@@ -101,14 +100,11 @@ class FiringGraphDrainer(object):
         if not early_stopping:
             self.flush_signals()
 
+        # Make sure forward and backward signal are synchro.
+        if not early_stopping:
+            self.server.check_synchro()
+
         return self
-
-    def flush_signals(self):
-        for _ in range(self.firing_graph.depth - 1):
-            self.run_iteration(False, True)
-
-        for _ in range(self.firing_graph.depth - 1):
-            self.run_iteration(False, False)
 
     def run_iteration(self, load_input, load_output):
         # Forward pass
@@ -121,6 +117,13 @@ class FiringGraphDrainer(object):
 
         # Increment iteration nb
         self.iter += 1
+
+    def flush_signals(self):
+        for _ in range(self.firing_graph.depth - 1):
+            self.run_iteration(False, True)
+
+        for _ in range(self.firing_graph.depth - 1):
+            self.run_iteration(False, False)
 
     def adapt_batch_size(self, max_batch_size):
 
@@ -210,9 +213,9 @@ def init_forward_signal(fg, batch_size, dtype=None):
     if dtype is None:
         dtype = set_forward_type(fg)
 
-    sax_i = csc_matrix((batch_size, fg.I.shape[0]), dtype=dtype)
-    sax_c = csc_matrix((batch_size, fg.C.shape[0]), dtype=dtype)
-    sax_o = csc_matrix((batch_size, fg.O.shape[1]), dtype=dtype)
+    sax_i = csr_matrix((batch_size, fg.I.shape[0]), dtype=dtype)
+    sax_c = csr_matrix((batch_size, fg.C.shape[0]), dtype=dtype)
+    sax_o = csr_matrix((batch_size, fg.O.shape[1]), dtype=dtype)
 
     return sax_i, sax_c, sax_o
 
