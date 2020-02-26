@@ -50,7 +50,9 @@ class TestEquations(unittest.TestCase):
     """
     def setUp(self):
         # Create a simple deep network (2 input vertices, 3 network vertices,, 2 output vertices)
-        self.ni, self.nc, self.no, self.depth, self.weight, self.p, self.q, self.batch_size = 2, 3, 2, 2, 10, 3, 2, 4
+        self.ni, self.nc, self.no, self.depth, self.weight, self.p, self.r, self.batch_size = 2, 3, 2, 2, 10, 3, 2, 4
+        self.ax_p, self.ax_r = np.ones(self.no) * self.p, np.ones(self.no) * self.r
+
         l_edges = [('input_0', 'core_0'), ('core_0', 'output_0')] +  \
                   [('input_0', 'core_1'), ('core_1', 'output_0')] + \
                   [('input_1', 'core_1')] + \
@@ -88,7 +90,7 @@ class TestEquations(unittest.TestCase):
 
         # Create server and drainer
         server = init_server(self.input, self.output)
-        drainer = FiringGraphDrainer(self.fga, server, t=100, p=self.p, q=self.q, batch_size=self.batch_size)
+        drainer = FiringGraphDrainer(self.fga, server, t=100, p=self.ax_p, r=self.ax_r, batch_size=self.batch_size)
 
         # Run for Two iteration and check forward signals are as expected
         drainer.run_iteration(True, False)
@@ -106,7 +108,7 @@ class TestEquations(unittest.TestCase):
         """
         # Create server and drainer
         server = init_server(self.input, self.output)
-        drainer = FiringGraphDrainer(self.fga, server, t=100, p=self.p, q=self.q, batch_size=self.batch_size)
+        drainer = FiringGraphDrainer(self.fga, server, t=100, p=self.ax_p, r=self.ax_r, batch_size=self.batch_size)
 
         # Run for Two iteration and check backward signals are as expected
         drainer.run_iteration(True, True)
@@ -131,7 +133,7 @@ class TestEquations(unittest.TestCase):
         drainer.iter += 1
 
         # Build expected backward signals
-        ax_O_expected = np.array([[self.q - self.p,  0.], [self.q,  0.], [0.,  2.*self.q]])
+        ax_O_expected = np.array([[self.r - self.p,  0.], [self.r,  0.], [0.,  2.*self.r]])
         ax_O_expected = ax_O_expected + (ax_O_expected != 0) * self.weight
         ax_O_track = np.array([[2,  0.], [1.,  0.], [0.,  2.]])
 
@@ -145,7 +147,7 @@ class TestEquations(unittest.TestCase):
         drainer.backward_transmiting()
 
         # Build expected backward signals
-        ax_I_expected = np.array([[self.q - self.p, self.q, 0], [0, self.q, 2. * self.q]])
+        ax_I_expected = np.array([[self.r - self.p, self.r, 0], [0, self.r, 2. * self.r]])
         ax_I_expected = ax_I_expected + (ax_I_expected != 0) * self.weight
         ax_I_track = np.array([[2, 1, 0], [0, 1, 2]])
 
@@ -161,13 +163,13 @@ class TestEquations(unittest.TestCase):
         """
         # Create server and drainer
         server = init_server(self.input, self.output)
-        drainer = FiringGraphDrainer(self.fgb, server, t=100, p=self.p, q=self.q, batch_size=self.batch_size)
+        drainer = FiringGraphDrainer(self.fgb, server, t=100, p=self.ax_p, r=self.ax_r, batch_size=self.batch_size)
 
         # Run for 1 epoch and check backward signals are as expected
         drainer.drain(1)
 
         # Build expected backward signals
-        ax_I_expected = np.array([[self.q - self.p, self.q, 0], [0, self.q, 2. * self.q]])
+        ax_I_expected = np.array([[self.r - self.p, self.r, 0], [0, self.r, 2. * self.r]])
         ax_I_expected = ax_I_expected + (ax_I_expected != 0) * self.weight
         ax_I_track = np.array([[2, 1, 0], [0, 1, 2]])
 
@@ -178,13 +180,13 @@ class TestEquations(unittest.TestCase):
 
         # Create server and drainer
         server = init_server(self.input, self.output)
-        drainer = FiringGraphDrainer(self.fgc, server, t=100, p=self.p, q=self.q, batch_size=self.batch_size)
+        drainer = FiringGraphDrainer(self.fgc, server, t=100, p=self.ax_p, r=self.ax_r, batch_size=self.batch_size)
 
         # Run for 1 epoch and check backward signals are as expected
         drainer.drain(1)
 
         # Build expected backward signals
-        ax_O_expected = np.array([[self.q - self.p,  0.], [self.q,  0.], [0.,  2. * self.q]])
+        ax_O_expected = np.array([[self.r - self.p,  0.], [self.r,  0.], [0.,  2. * self.r]])
         ax_O_expected = ax_O_expected + (ax_O_expected != 0) * self.weight
         ax_O_track = np.array([[2,  0.], [1.,  0.], [0.,  2.]])
 

@@ -1,5 +1,5 @@
 # Global import
-from scipy.sparse import csc_matrix, csr_matrix, vstack
+from scipy.sparse import csc_matrix, csr_matrix, vstack, diags
 from numpy import newaxis
 
 # Local import
@@ -104,7 +104,7 @@ def fpc(sax_c, sax_cm, ax_levels):
     return sax_c
 
 
-def fpo(sax_o, server, batch_size, p, q):
+def fpo(sax_o, server, batch_size, ax_p, ax_q):
     """
     Compute feedback from output forward signal and ground of truth of activation
 
@@ -114,9 +114,9 @@ def fpo(sax_o, server, batch_size, p, q):
     :type server: scipy.sparse.spmatrix
     :param batch_size:
     :type batch_size: int
-    :param p:
+    :param ax_p:
     :type: int
-    :param q:
+    :param ax_q:
     :type: int
     :return: Feedback
     :rtype: scipy.sparse.spmatrix
@@ -126,7 +126,7 @@ def fpo(sax_o, server, batch_size, p, q):
     sax_got, sax_o = server.next_backward(sax_o, n=batch_size)
 
     # Compute feedback signal
-    sax_ob = (p + q) * sax_got.tocsc().multiply(sax_o)
-    sax_ob -= p * sax_o
+    sax_ob = sax_got.tocsc().multiply(sax_o).dot(diags(ax_p + ax_q))
+    sax_ob -= sax_o.dot(diags(ax_p))
 
     return sax_ob.transpose()

@@ -2,7 +2,7 @@
 import pickle
 import random
 import string
-from scipy.sparse import lil_matrix, csc_matrix, hstack, vstack
+from scipy.sparse import csc_matrix
 import copy
 from numpy import uint32
 

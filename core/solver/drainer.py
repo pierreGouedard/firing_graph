@@ -9,15 +9,15 @@ from ..tools.equations.graph import buc, buo, bui
 
 
 class FiringGraphDrainer(object):
-    def __init__(self, firing_graph, server, batch_size, p=None, q=None, t=None, verbose=0):
+    def __init__(self, firing_graph, server, batch_size, p=None, r=None, t=None, verbose=0):
 
         # Assert that draining parameters are available
         assert firing_graph.drainer_params.get('p', p) is not None, "parameter p of drainer is None"
-        assert firing_graph.drainer_params.get('q', q) is not None, "parameter q of drainer is None"
+        assert firing_graph.drainer_params.get('r', r) is not None, "parameter q of drainer is None"
         assert firing_graph.drainer_params.get('t', t) is not None, "parameter t of drainer is None"
 
         # Core params
-        self.p, self.q = firing_graph.drainer_params.get('p', p), firing_graph.drainer_params.get('q', q)
+        self.ax_p, self.ax_r = firing_graph.drainer_params.get('p', p), firing_graph.drainer_params.get('r', r)
         self.t = firing_graph.drainer_params.get('t', t)
         self.bs = batch_size
         self.firing_graph = firing_graph
@@ -29,7 +29,7 @@ class FiringGraphDrainer(object):
         # Init signals
         self.sax_i, self.sax_c, self.sax_o = init_forward_signal(self.firing_graph, self.bs)
         self.sax_im, self.sax_cm = init_forward_memory(self.firing_graph, self.bs)
-        self.sax_cb, self.sax_ob = init_backward_signal(self.firing_graph, self.bs, p=self.p, q=self.q)
+        self.sax_cb, self.sax_ob = init_backward_signal(self.firing_graph, self.bs, p=max(self.ax_p), r=max(self.ax_r))
 
         # set dtypes of server
         self.server.dtype_forward = self.sax_i.dtype
@@ -168,7 +168,7 @@ class FiringGraphDrainer(object):
 
         # If decay reached compute feedback
         if self.iter >= self.firing_graph.depth - 1 and load_output:
-            self.sax_ob = fpo(self.sax_o, self.server, self.bs, self.p, self.q)
+            self.sax_ob = fpo(self.sax_o, self.server, self.bs, self.ax_p, self.ax_r)
 
         else:
             self.sax_ob = csc_matrix((self.firing_graph.O.shape[1], self.bs), dtype=self.sax_ob.dtype)
@@ -235,10 +235,10 @@ def init_forward_memory(fg, batch_size, dtype=None):
     return sax_im, sax_cm
 
 
-def init_backward_signal(fg, batch_size, dtype=None, p=None, q=None):
+def init_backward_signal(fg, batch_size, dtype=None, p=None, r=None):
 
     if dtype is None:
-        dtype = set_backward_type(fg, p, q)
+        dtype = set_backward_type(fg, p, r)
 
     # Get memory size needed
     mem_size = get_mem_size(batch_size, fg.depth)
@@ -264,10 +264,10 @@ def set_forward_type(fg):
     return dtype
 
 
-def set_backward_type(fg, p, q):
+def set_backward_type(fg, p, r):
 
     max_outcoming = max([fg.I.sum(axis=1).max(), fg.C.sum(axis=1).max(), fg.O.sum(axis=1).max()])
-    max_value, min_value = max_outcoming * q, max_outcoming * -1 * p
+    max_value, min_value = max_outcoming * r, max_outcoming * -1 * p
 
     if max_value < np.iinfo(np.int8).max and min_value > np.iinfo(np.int8).min:
         dtype = np.int8

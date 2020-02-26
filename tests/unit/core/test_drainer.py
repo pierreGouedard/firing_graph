@@ -1,6 +1,7 @@
 # Global imports
 import unittest
 from scipy.sparse import csc_matrix
+import numpy as np
 
 # Local import
 from core.data_structure.utils import gather_matrices
@@ -29,7 +30,6 @@ class TestDrainer(unittest.TestCase):
         self.ap3_fg = self.ap3.build_graph_pattern_init()
 
     def test_time_mask(self):
-
         """
         Test the well functioning of mask on backward updates
         python -m unittest tests.unit.core.test_drainer.TestDrainer.test_time_mask
@@ -41,11 +41,14 @@ class TestDrainer(unittest.TestCase):
         server = create_server(csc_matrix(ax_input), csc_matrix(ax_output))
 
         # Create drainer
-        drainer = FiringGraphDrainer(self.ap2_fg, server, t=self.t_mask, p=1, q=1, batch_size=1, verbose=1)
+        drainer = FiringGraphDrainer(
+            self.ap2_fg, server, t=self.t_mask, p=np.ones(self.ap2.no), r=np.ones(self.ap2.no), batch_size=1
+        )
         drainer.drain(100)
 
         # Get matrice of the graph
-        fg, fg_final, fg_init = drainer.firing_graph, self.ap2.build_graph_pattern_final(), self.ap2.build_graph_pattern_init()
+        fg, fg_final, fg_init = drainer.firing_graph, self.ap2.build_graph_pattern_final(), \
+                                self.ap2.build_graph_pattern_init()
         I, I_init, I_final = fg.Iw.toarray(), fg_init.Iw.toarray(), fg_final.Iw.toarray()
 
         # Assert mask are working (no more than self.t_mask structure update
@@ -53,7 +56,6 @@ class TestDrainer(unittest.TestCase):
         self.assertTrue((I[(0 < I) & (I <= self.w0)] == I_init[~(I_final > 0) & (I_init > 0)] - self.t_mask).all())
 
     def test_andpattern2(self):
-
         """
         Test And Pattern of depth 2
         python -m unittest tests.unit.core.test_drainer.TestDrainer.test_andpattern2
@@ -65,7 +67,9 @@ class TestDrainer(unittest.TestCase):
         server = create_server(csc_matrix(ax_input), csc_matrix(ax_output))
 
         # Create drainer
-        drainer = FiringGraphDrainer(self.ap2_fg, server, t=1000, p=1, q=1, batch_size=10, verbose=1)
+        drainer = FiringGraphDrainer(
+            self.ap2_fg, server, t=1000, p=np.ones(self.ap2.no), r=np.ones(self.ap2.no), batch_size=10
+        )
         drainer.drain(n=self.n)
 
         # Get Data and assert result is as expected
@@ -104,7 +108,9 @@ class TestDrainer(unittest.TestCase):
         server = create_server(csc_matrix(ax_input), csc_matrix(ax_output))
 
         # Create drainer
-        drainer = FiringGraphDrainer(self.ap3_fg, server, t=1000, p=1, q=1, batch_size=1, verbose=1)
+        drainer = FiringGraphDrainer(
+            self.ap3_fg, server, t=1000, p=np.ones(self.ap3.no), r=np.ones(self.ap3.no), batch_size=1
+        )
         drainer.drain(n=self.n * 10)
 
         # Get Data and assert result is as expected
@@ -149,12 +155,16 @@ class TestDrainer(unittest.TestCase):
         server = create_server(csc_matrix(ax_input), csc_matrix(ax_output))
 
         # Drain with batch size of 2
-        drainer_2 = FiringGraphDrainer(self.ap2_fg.copy(), server, t=1000, p=1, q=1, batch_size=2, verbose=1)
+        drainer_2 = FiringGraphDrainer(
+            self.ap2_fg.copy(), server, t=1000, p=np.ones(self.ap2.no), r=np.ones(self.ap2.no), batch_size=2
+        )
         drainer_2.drain(n=200)
 
         # Drain with batch size of 1
         server.stream_features()
-        drainer_1 = FiringGraphDrainer(self.ap2_fg.copy(), server, t=1000, p=1, q=1, batch_size=1, verbose=1)
+        drainer_1 = FiringGraphDrainer(
+            self.ap2_fg.copy(), server, t=1000, p=np.ones(self.ap2.no), r=np.ones(self.ap2.no), batch_size=1
+        )
         drainer_1.drain(n=400)
 
         # There should be no more difference between edges weight than difference of batch size
@@ -163,7 +173,9 @@ class TestDrainer(unittest.TestCase):
 
         # Drain with manual iteration management
         server.stream_features()
-        drainer_1m = FiringGraphDrainer(self.ap2_fg.copy(), server, t=1000, p=1, q=1, batch_size=1, verbose=1)
+        drainer_1m = FiringGraphDrainer(
+            self.ap2_fg.copy(), server, t=1000, p=np.ones(self.ap2.no), r=np.ones(self.ap2.no), batch_size=1
+        )
         for _ in range(400):
             drainer_1m.drain()
             drainer_1m.reset_all()
@@ -183,12 +195,16 @@ class TestDrainer(unittest.TestCase):
         server = create_server(csc_matrix(ax_input), csc_matrix(ax_output))
 
         # Drain with batch size of 2
-        drainer_2 = FiringGraphDrainer(self.ap3_fg.copy(), server, t=1000, p=1, q=1, batch_size=2, verbose=1)
+        drainer_2 = FiringGraphDrainer(
+            self.ap3_fg.copy(), server, t=1000, p=np.ones(self.ap3.no), r=np.ones(self.ap3.no), batch_size=2
+        )
         drainer_2.drain(n=100)
 
         # Drain with batch size of 1
         server.stream_features()
-        drainer_1 = FiringGraphDrainer(self.ap3_fg.copy(), server, t=1000, p=1, q=1, batch_size=1, verbose=1)
+        drainer_1 = FiringGraphDrainer(
+            self.ap3_fg.copy(), server, t=1000, p=np.ones(self.ap3.no), r=np.ones(self.ap3.no), batch_size=1
+        )
         drainer_1.drain(n=200)
 
         # There should be no more difference between edges weight than difference of batch size
@@ -197,7 +213,9 @@ class TestDrainer(unittest.TestCase):
 
         # Drain with manual iteration management
         server.stream_features()
-        drainer_1m = FiringGraphDrainer(self.ap3_fg.copy(), server, t=1000, p=1, q=1, batch_size=1, verbose=1)
+        drainer_1m = FiringGraphDrainer(
+            self.ap3_fg.copy(), server, t=1000, p=np.ones(self.ap3.no), r=np.ones(self.ap3.no), batch_size=1
+        )
         for _ in range(200):
             drainer_1m.drain()
             drainer_1m.reset_all()

@@ -75,7 +75,7 @@ class TestServer(unittest.TestCase):
         self.soft_server.pattern_backward = None
 
         # Assert correct behaviour
-        sax_ob = fpo(self.sax_test, self.soft_server, self.sax_forward.shape[0], 1, 1)
+        sax_ob = fpo(self.sax_test, self.soft_server, self.sax_forward.shape[0], np.ones(1), np.ones(1))
         self.assertTrue((sax_ob.toarray()[0] == self.sax_nopattern_expected).all())
 
     def test_server_backward_pattern(self):
@@ -88,14 +88,14 @@ class TestServer(unittest.TestCase):
         self.soft_server.stream_features()
 
         # Assert correct behaviour
-        sax_ob = fpo(self.sax_test, self.soft_server, self.sax_forward.shape[0], 1, 1)
+        sax_ob = fpo(self.sax_test, self.soft_server, self.sax_forward.shape[0], np.ones(1), np.ones(1))
         self.assertTrue((sax_ob.toarray() == self.sax_soft_expected).all())
 
         # Stream feedback signal with soft orthogonality settings
         self.hard_server.stream_features()
 
         # Assert correct behaviour
-        sax_ob = fpo(self.sax_test, self.hard_server, self.sax_forward.shape[0], 1, 1)
+        sax_ob = fpo(self.sax_test, self.hard_server, self.sax_forward.shape[0], np.ones(1), np.ones(1))
         self.assertTrue((sax_ob.toarray() == self.sax_hard_expected).all())
 
 
