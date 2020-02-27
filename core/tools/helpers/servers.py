@@ -108,22 +108,23 @@ class ArrayServer(object):
         # Compute new step of backward
         self.step_backward = (self.step_backward + n) % self.sax_backward.shape[0]
 
-        if sax_o is None:
-            return sax_data.astype(self.dtype_backward)
-
-        # Compute post processing signal from backward pattern
+        sax_pattern = 0
         if self.pattern_backward is not None:
             sax_pattern = vstack([self.sax_forward[start:end, :] for (start, end) in l_positions])
             sax_pattern = self.pattern_backward.propagate(sax_pattern).multiply(sax_data)
 
-            if self.strat_colinearity == 'soft':
+        if sax_o is None:
+            if self.pattern_backward is not None:
+                return sax_data.astype(self.dtype_backward)
+            else:
+                return (sax_data - sax_pattern > 0).astype(self.dtype_backward)
+
+        else:
+            if self.strat_colinearity == 'soft' and self.pattern_backward is not None:
                 return sax_data.astype(self.dtype_backward), (sax_o - sax_pattern > 0).astype(self.dtype_backward)
 
             else:
                 return (sax_data - sax_pattern > 0).astype(self.dtype_backward), (sax_o > 0).astype(self.dtype_backward)
-
-        else:
-            return sax_data.astype(self.dtype_backward), (sax_o > 0).astype(self.dtype_backward)
 
     def save_as_pickle(self, path):
         with open(path, 'wb') as handle:

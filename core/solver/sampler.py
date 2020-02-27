@@ -68,13 +68,8 @@ class SupervisedSampler(object):
         sax_i, sax_got = self.get_signal_batch()
 
         for i in range(self.n_outputs):
-            if self.firing_graph is not None:
-                sax_fg = self.firing_graph.propagate(sax_i)[:, i]
-            else:
-                sax_fg = csc_matrix((self.n_batch, 1), dtype=bool)
-
             # selected random active
-            ax_mask = sax_got[:, i].toarray()[:, 0] & ~(sax_fg.toarray()[:, 0])
+            ax_mask = sax_got[:, i].toarray()[:, 0]
             n_sample = min(ax_mask.sum(), self.n_samples)
 
             if n_sample == 0:
@@ -110,11 +105,6 @@ class SupervisedSampler(object):
         sax_i, sax_got = self.get_signal_batch()
 
         for i in range(self.n_outputs):
-            if self.firing_graph is not None:
-                sax_fg = self.firing_graph.propagate(sax_i)[:, i]
-            else:
-                sax_fg = csc_matrix((self.n_batch, 1), dtype=bool)
-
             l_pattern_sub = [(j, struct) for j, struct in enumerate(self.patterns) if i in struct.O.nonzero()[1]]
 
             for j, pat in l_pattern_sub:
@@ -123,7 +113,7 @@ class SupervisedSampler(object):
                 sax_pat = pat.propagate(sax_i)[:, i]
 
                 # selected random active
-                ax_mask = sax_pat.multiply(sax_got[:, i]).toarray()[:, 0] & ~(sax_fg.toarray()[:, 0])
+                ax_mask = sax_pat.multiply(sax_got[:, i]).toarray()[:, 0]
                 n_sample = min(ax_mask.sum(), self.n_samples)
 
                 if n_sample == 0:
