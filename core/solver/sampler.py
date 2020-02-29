@@ -75,7 +75,7 @@ class SupervisedSampler(object):
             if n_sample == 0:
                 continue
 
-            l_sampled_indices = np.random.randint(n_sample, size=n_sample)
+            l_sampled_indices = np.random.randint(int(ax_mask.sum()), size=n_sample)
             sax_samples = sax_i[ax_mask, :][l_sampled_indices, :]
 
             for sax_sample in sax_samples:
@@ -101,7 +101,6 @@ class SupervisedSampler(object):
         # Init
         self.vertices = {i: [] for i in range(len(self.patterns))}
         ax_selected, n = np.zeros(len(self.patterns), dtype=int), 0
-
         sax_i, sax_got = self.get_signal_batch()
 
         for i in range(self.n_outputs):
@@ -119,7 +118,7 @@ class SupervisedSampler(object):
                 if n_sample == 0:
                     continue
 
-                l_sampled_indices = np.random.randint(n_sample, size=n_sample)
+                l_sampled_indices = np.random.randint(int(ax_mask.sum()), size=n_sample)
                 sax_samples = sax_i[ax_mask, :][l_sampled_indices, :]
 
                 for sax_sample in sax_samples:

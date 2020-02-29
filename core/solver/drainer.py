@@ -11,14 +11,9 @@ from ..tools.equations.graph import buc, buo, bui
 class FiringGraphDrainer(object):
     def __init__(self, firing_graph, server, batch_size, p=None, r=None, t=None, verbose=0):
 
-        # Assert that draining parameters are available
-        assert firing_graph.drainer_params.get('p', p) is not None, "parameter p of drainer is None"
-        assert firing_graph.drainer_params.get('r', r) is not None, "parameter q of drainer is None"
-        assert firing_graph.drainer_params.get('t', t) is not None, "parameter t of drainer is None"
-
         # Core params
-        self.ax_p, self.ax_r = firing_graph.drainer_params.get('p', p), firing_graph.drainer_params.get('r', r)
-        self.t = firing_graph.drainer_params.get('t', t)
+        self.ax_p, self.ax_r = p, r
+        self.t = t
         self.bs = batch_size
         self.firing_graph = firing_graph
         self.verbose = verbose

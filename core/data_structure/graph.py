@@ -19,7 +19,7 @@ class FiringGraph(object):
 
     """
     def __init__(self, project, ax_levels, matrices, depth=2, graph_id=None, is_drained=False, partitions=None,
-                 drainer_params=None, precision=None, backward_firing=None):
+                 precision=None, backward_firing=None):
 
         if graph_id is None:
             graph_id = ''.join([random.choice(string.ascii_letters) for _ in range(5)])
@@ -39,7 +39,6 @@ class FiringGraph(object):
 
         # set additional (optional) util attribute
         self.partitions = partitions
-        self.drainer_params = drainer_params if drainer_params is not None else {}
         self.precision = precision
 
         # Set backward tracking matrices
@@ -132,7 +131,7 @@ class FiringGraph(object):
 
     @staticmethod
     def from_matrices(sax_I, sax_C, sax_O, ax_levels, mask_matrices=None, mask_vertices=None, depth=2, project='fg',
-                      graph_id=None, partitions=None, drainer_params=None, precision=None):
+                      graph_id=None, partitions=None, precision=None):
         """
 
         :param sax_I:
@@ -145,7 +144,6 @@ class FiringGraph(object):
         :param project:
         :param graph_id:
         :param partitions:
-        :param drainer_params:
         :return:
         """
 
@@ -159,7 +157,7 @@ class FiringGraph(object):
 
         return FiringGraph(
             project, ax_levels, depth=depth, matrices=d_matrices, graph_id=graph_id, partitions=partitions,
-            drainer_params=drainer_params, precision=precision
+            precision=precision
         )
 
     @staticmethod

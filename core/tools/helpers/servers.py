@@ -51,7 +51,7 @@ class FileServer(object):
 class ArrayServer(object):
 
     def __init__(self, sax_forward, sax_backward, dtype_forward=int, dtype_backward=int, pattern_forward=None,
-                 pattern_backward=None, strat_colinearity='soft'):
+                 pattern_backward=None, colinear_penalisation='soft'):
 
         # Set sparse signals
         self.sax_forward = sax_forward.tocsr()
@@ -66,13 +66,15 @@ class ArrayServer(object):
         self.step_forward, self.step_backward = 0, 0
 
         # Define strategy to penalize co-linearity of output with signal propagated by pattern_backward
-        self.strat_colinearity = strat_colinearity
+        self.colinear_penalisation = colinear_penalisation
 
     def stream_features(self):
         self.step_forward, self.step_backward = 0, 0
+        return self
 
     def check_synchro(self):
         assert self.step_forward == self.step_backward, "[SERVER]: Step of forward and backward differs"
+        return self
 
     @staticmethod
     def recursive_positions(step, n, n_max):
@@ -120,7 +122,7 @@ class ArrayServer(object):
                 return (sax_data - sax_pattern > 0).astype(self.dtype_backward)
 
         else:
-            if self.strat_colinearity == 'soft' and self.pattern_backward is not None:
+            if self.colinear_penalisation == 'soft' and self.pattern_backward is not None:
                 return sax_data.astype(self.dtype_backward), (sax_o - sax_pattern > 0).astype(self.dtype_backward)
 
             else:
