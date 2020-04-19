@@ -27,75 +27,61 @@ class TestServer(unittest.TestCase):
         ])
 
         self.sax_backward = csc_matrix([[0], [0], [0], [0], [1], [1], [1], [1]])
-        self.sax_test = csc_matrix([[1], [0], [1], [0], [1], [1], [1], [1]])
+        self.sax_test = csc_matrix([[1], [0], [1], [0], [1], [1], [1], [0]])
 
         # Create patterns to test functionality of forward and  backward patterns in server
         d_matrices = create_empty_matrices(self.sax_forward.shape[1], self.sax_backward.shape[1], 1)
         d_matrices['Iw'][3, 0], d_matrices['Ow'][0, 0] = 1, 1
         self.pattern = FiringGraph('test_server', np.ones(1), d_matrices, depth=2)
 
-        self.soft_server = ArrayServer(
+        # Create server
+        self.server = ArrayServer(
             self.sax_forward, self.sax_backward, dtype_forward=int, dtype_backward=int,
-            pattern_backward=self.pattern.copy(), strat_colinearity='soft'
+            pattern_mask=self.pattern.copy()
         )
 
-        self.hard_server = ArrayServer(
-            self.sax_forward, self.sax_backward, dtype_forward=int, dtype_backward=int,
-            pattern_backward=self.pattern.copy(), strat_colinearity='hard'
-        )
+        self.sax_expected = np.array([-1, 0, -1, 0, 1, 1, 1, 0])
+        self.sax_expected_mask = np.array([-1, 0, 0, 0, 1, 1, 0, 0])
 
-        self.sax_nopattern_expected = np.array([-1, 0, -1, 0, 1, 1, 1, 1])
-        self.sax_soft_expected = np.array([-1, 0, -1, 0, 1, 1, 0, 0])
-        self.sax_hard_expected = np.array([-1, 0, -1, 0, 1, 1, -1, -1])
-
-    def test_server_no_pattern(self):
+    def test_server_no_mask(self):
         """
-        python -m unittest tests.unit.core.test_server.TestServer.test_server_no_pattern
+        python -m unittest tests.unit.core.test_server.TestServer.test_server_no_mask
 
         """
         # stream once
-        self.soft_server.pattern_backward = None
-        sax_i = self.soft_server.next_forward(5)
+        self.server.pattern_mask = None
+        sax_i = self.server.next_forward(5).sax_data_forward
 
         # Assert correct behaviour
         self.assertEqual(sax_i.shape, (5, self.sax_forward.shape[1]))
         self.assertTrue((sax_i.toarray() == self.sax_forward.toarray()[:5, :]).all())
-        self.assertEqual(self.soft_server.step_forward, 5)
+        self.assertEqual(self.server.step_forward, 5)
 
         # Stream another time
-        sax_i = self.soft_server.next_forward(5)
+        sax_i = self.server.next_forward(5).sax_data_forward
 
         # Assert correct behaviour
         self.assertEqual(sax_i.shape, (5, self.sax_forward.shape[1]))
         self.assertTrue((sax_i.toarray()[0, :] == self.sax_forward.toarray()[5, :]).all())
         self.assertTrue((sax_i.toarray()[-1, :] == self.sax_forward.toarray()[9 % self.sax_forward.shape[0], :]).all())
+        self.assertEqual(self.server.step_forward, 2)
 
         # Stream feedback signal
-        self.soft_server.stream_features()
-        self.soft_server.pattern_backward = None
+        self.server.stream_features()
 
         # Assert correct behaviour
-        sax_ob = fpo(self.sax_test, self.soft_server, self.sax_forward.shape[0], np.ones(1), np.ones(1))
-        self.assertTrue((sax_ob.toarray()[0] == self.sax_nopattern_expected).all())
+        sax_ob = fpo(self.sax_test, self.server, self.sax_forward.shape[0], np.ones(1), np.ones(1))
+        self.assertTrue((sax_ob.toarray()[0] == self.sax_expected).all())
 
-    def test_server_backward_pattern(self):
+    def test_server_mask_pattern(self):
         """
-        python -m unittest tests.unit.core.test_server.TestServer.test_server_backward_pattern
+        python -m unittest tests.unit.core.test_server.TestServer.test_server_mask_pattern
 
         """
 
         # Stream feedback signal with soft orthogonality settings
-        self.soft_server.stream_features()
+        self.server.stream_features()
 
         # Assert correct behaviour
-        sax_ob = fpo(self.sax_test, self.soft_server, self.sax_forward.shape[0], np.ones(1), np.ones(1))
-        self.assertTrue((sax_ob.toarray() == self.sax_soft_expected).all())
-
-        # Stream feedback signal with soft orthogonality settings
-        self.hard_server.stream_features()
-
-        # Assert correct behaviour
-        sax_ob = fpo(self.sax_test, self.hard_server, self.sax_forward.shape[0], np.ones(1), np.ones(1))
-        self.assertTrue((sax_ob.toarray() == self.sax_hard_expected).all())
-
-
+        sax_ob = fpo(self.sax_test, self.server, self.sax_forward.shape[0], np.ones(1), np.ones(1))
+        self.assertTrue((sax_ob.toarray() == self.sax_expected_mask).all())

@@ -18,7 +18,7 @@ def fti(server, firing_graph, batch_size):
     :return: Forward signal of input vertice
     :rtype: scipy.sparse.spmatrix
     """
-    sax_i = server.next_forward(n=batch_size)
+    sax_i = server.next_forward(n=batch_size).sax_data_forward
 
     return sax_i
 
@@ -110,8 +110,8 @@ def fpo(sax_o, server, batch_size, ax_p, ax_q):
 
     :param sax_o: received forward signals
     :type sax_o: scipy.sparse.spmatrix
-    :param server: core.imputers.ArrayServer
-    :type server: scipy.sparse.spmatrix
+    :param server:
+    :type server: core.tools.helpers.server.ArrayServer
     :param batch_size:
     :type batch_size: int
     :param ax_p:
@@ -123,7 +123,14 @@ def fpo(sax_o, server, batch_size, ax_p, ax_q):
     """
 
     # Get got signal
-    sax_got, sax_o = server.next_backward(sax_o, n=batch_size)
+    sax_got = server.next_backward(n=batch_size).sax_data_backward
+    sax_o = (sax_o > 0).astype(server.dtype_backward)
+
+    # update output with mask if any
+    if server.sax_mask_forward is not None:
+        sax_o += server.sax_mask_forward.multiply(sax_o)
+        sax_o.data %= 2
+        sax_o.eliminate_zeros()
 
     # Compute feedback signal
     sax_ob = sax_got.tocsc().multiply(sax_o).dot(diags(ax_p + ax_q))

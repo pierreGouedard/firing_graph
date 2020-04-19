@@ -95,7 +95,7 @@ class FiringGraphDrainer(object):
         if not early_stopping:
             self.flush_signals()
 
-        # Make sure forward and backward signal are synchro.
+        # Make sure forward and backward signal are synchronized.
         if not early_stopping:
             self.server.check_synchro()
 

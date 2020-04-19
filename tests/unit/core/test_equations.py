@@ -30,7 +30,7 @@ class TestEquations(unittest.TestCase):
         | i0 | i1 | -> | c0 | c1 | c2 |
         | 0  |  0 | -> | 0  |  0 | 0  |
         | 1  |  0 | -> | 1  |  0 | 0  |
-        | 0  |  1 | -> | 0  |  0 | 1  sax_out|
+        | 0  |  1 | -> | 0  |  0 | 1  |
         | 1  |  1 | -> | 1  |  1 | 1  |
 
         Table Core -> Output:

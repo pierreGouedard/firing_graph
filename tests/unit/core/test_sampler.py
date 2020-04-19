@@ -1,7 +1,7 @@
 # Global imports
 import unittest
 import numpy as np
-from scipy.sparse import csc_matrix, hstack
+from scipy.sparse import csc_matrix, lil_matrix
 
 # Local import
 from core.tools.helpers.servers import ArrayServer
@@ -15,22 +15,25 @@ class TestSampler(unittest.TestCase):
     def setUp(self):
 
         # Set core parameters
-        self.ni, self.no, self.n_samples, self.p_sample, self.weight = 100, 4, 2, 0.8, 10
-        self.n_dead, self.precision, self.batch_size = 10, 0.5, 100
+        self.ni, self.no, self.weight = 100, 2, 10
+        self.l_outputs = [[1, 11, 21, 31, 41, 51, 61, 71, 81, 91], [0, 25, 50, 75]]
 
-        # Generate random I / O
-        self.sax_inputs = hstack(
-            [csc_matrix(np.random.binomial(1, 0.7, (1000, self.ni - self.n_dead))), csc_matrix((1000, self.n_dead))]
-        )
-        self.sax_outputs = csc_matrix(np.random.binomial(1, 0.5, (1000, self.no)))
+        # Generate I / O
+        self.sax_inputs = lil_matrix(np.eye(self.ni))
+        self.sax_inputs[1, 0] = 1
+        self.sax_outputs = lil_matrix((self.ni, self.no))
+        for i, l_inds in enumerate(self.l_outputs):
+            self.sax_outputs[self.l_outputs[i], i] = 1
+
+        self.sax_inputs, self.sax_outputs = self.sax_inputs.tocsc(), self.sax_outputs.tocsc()
 
         # Set structures
-        self.patterns, self.indices = [], []
-        for i in range(self.no):
-            self.indices.append(np.random.randint(0, self.ni - self.n_dead, 5))
-            self.patterns.append(
-                generate_pattern(self.ni, self.no, i, self.indices[-1])
-            )
+        self.l_patterns, self.patterns = [[1, 21, 41, 61, 81], [0, 75]], []
+        for i, l_inds in enumerate(self.l_patterns):
+            self.patterns.append(generate_pattern(self.ni, self.no, i, self.l_patterns[i]))
+
+        # Add another random pattern
+        self.patterns.append(generate_pattern(self.ni, self.no, 0, [99]))
 
     def test_generative_sampling(self):
         """
@@ -39,12 +42,28 @@ class TestSampler(unittest.TestCase):
         """
         # Instantiate sampler
         server = init_server(self.sax_inputs, self.sax_outputs)
-        sampler = SupervisedSampler(server, self.ni, self.no, self.batch_size, self.p_sample, self.n_samples)
 
-        # Sample vertices
+        # Sampling with p_sample=0
+        sampler = SupervisedSampler(server, self.ni, self.no, self.ni, 0, 5)
         sampler.generative_sampling()
-        self.assertEqual(len(sampler.vertices), self.no)
-        self.assertTrue(all([len(l_v) == self.n_samples for _, l_v in sampler.vertices.items()]))
+        self.assertEqual(len(sampler.samples), self.no)
+        for i in range(self.no):
+            self.assertTrue(len(sampler.samples[i]) == 0)
+
+        # Sampling with p_sample=1
+        sampler = SupervisedSampler(server, self.ni, self.no, self.ni, 1, 5)
+        sampler.generative_sampling()
+
+        self.assertEqual(len(sampler.samples), self.no)
+        if 0 in sampler.samples[0]:
+            self.assertTrue(len(sampler.samples[0]) == 6)
+            self.assertTrue(len(np.unique(sampler.samples[0])) == 6)
+        else:
+            self.assertTrue(len(sampler.samples[0]) == 5)
+            self.assertTrue(len(np.unique(sampler.samples[0])) == 5)
+
+        self.assertTrue(len(sampler.samples[1]) == len(self.l_outputs[1]))
+        self.assertTrue(len(np.unique(sampler.samples[1])) == len(self.l_outputs[1]))
 
     def test_discriminative_sampling(self):
         """
@@ -53,27 +72,23 @@ class TestSampler(unittest.TestCase):
         """
         # Instantiate sampler
         server = init_server(self.sax_inputs, self.sax_outputs)
-        sampler = SupervisedSampler(
-            server, self.ni, self.no, self.batch_size, self.p_sample, self.n_samples, patterns=self.patterns
-        )
 
-        # Sample vertices
+        # Sampling with p_sample=0
+        sampler = SupervisedSampler(server, self.ni, self.no, self.ni, 0, 5, patterns=self.patterns)
         sampler.discriminative_sampling()
+        self.assertEqual(len(sampler.samples), len(self.patterns))
+        for i in range(len(self.patterns)):
+            self.assertTrue(len(sampler.samples[i]) == 0)
 
-        # Check sampling
-        self.assertEqual(len(sampler.vertices), len(self.patterns))
-        self.assertTrue(all([len(l_v) == self.n_samples for _, l_v in sampler.vertices.items()]))
+        # Sampling with p_sample=1
+        sampler = SupervisedSampler(server, self.ni, self.no, self.ni, 1, 6,  patterns=self.patterns)
+        sampler.discriminative_sampling()
+        self.assertEqual(len(sampler.samples), len(self.patterns))
+        self.assertTrue(len(sampler.samples[0]) == 1)
+        self.assertTrue(sampler.samples[0][0] == 0)
 
-        # Make sure that base_pattern corresponding to sampled overlap with indices sampled
-        for i, pattern in enumerate(self.patterns):
-            ax_pattern = np.multiply(
-                pattern.propagate(self.sax_inputs).toarray()[:, i],
-                self.sax_outputs.toarray()[:, i]
-            )
-            self.assertTrue(not (ax_pattern.dot(self.sax_inputs[:, -self.n_dead].toarray()) > 0).any())
-            for j, l_ind in enumerate(sampler.vertices[i]):
-                ax_signals_sampled = self.sax_inputs[:, list(l_ind)].toarray()
-                self.assertTrue((ax_pattern.dot(ax_signals_sampled) > 0).all())
+        for i in range(1, len(self.patterns)):
+            self.assertTrue(len(sampler.samples[i]) == 0)
 
 
 def init_server(sax_input, sax_output):
@@ -105,7 +120,7 @@ def generate_pattern(n_inputs, n_outputs, index_output, l_indices):
     d_matrices = create_empty_matrices(n_inputs, n_outputs, 1)
 
     # Set level and matrices
-    ax_levels = np.ones(1) * (len(l_indices) - 1)
+    ax_levels = np.ones(1)
     d_matrices['Iw'][l_indices, 0] = 1
     d_matrices['Ow'][0, index_output] = 1
 
