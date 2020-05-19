@@ -235,8 +235,8 @@ def add_core_vertices(d_matrices, n_core, offset, write_mode=True):
     d_matrices = {
         'Iw': hstack([d_matrices['Iw'][:, :offset], csc_matrix((n_inputs, n_core))]),
         'Im': hstack([d_matrices['Im'][:, :offset], csc_matrix((n_inputs, n_core))]),
-        'Ow': vstack([d_matrices['Ow'][:, :offset], csr_matrix((n_core, n_outputs))]),
-        'Om': vstack([d_matrices['Om'][:, :offset], csr_matrix((n_core, n_outputs))]),
+        'Ow': vstack([d_matrices['Ow'][:offset, :], csr_matrix((n_core, n_outputs))]),
+        'Om': vstack([d_matrices['Om'][:offset, :], csr_matrix((n_core, n_outputs))]),
         'Cw': vstack([sax_Cw_upper, csr_matrix((n_core, sax_Cw_upper.shape[1]))]),
         'Cm': vstack([sax_Cm_upper, csr_matrix((n_core, sax_Cm_upper.shape[1]))])
     }

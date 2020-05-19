@@ -2,10 +2,10 @@
 import pickle
 import random
 import string
-from scipy.sparse import csc_matrix
+from scipy.sparse import csc_matrix, vstack
 import copy
-from numpy import uint32
-
+from numpy import uint32, vectorize
+from numpy.random import binomial
 # Local import
 from ..data_structure import utils
 from ..tools.equations.forward import ftc, fto, fpc
@@ -169,12 +169,20 @@ class FiringGraph(object):
         """
         return FiringGraph(**d_graph)
 
-    def propagate(self, sax_i):
+    def propagate(self, sax_i, max_batch=50000, dropout_rate=0.):
         """
 
         :param sax_i:
         :return:
         """
+
+        # If input size too large, then split work
+        if sax_i.shape[0] > max_batch:
+            l_outputs, n = [], int(sax_i.shape[0] / max_batch) + 1
+            for i, j in  [(max_batch * i, max_batch * (i + 1)) for i in range(n)]:
+                l_outputs.append(self.propagate(sax_i[i:j, :]))
+            return vstack(l_outputs)
+
 
         # Init core signal to all zeros
         sax_c = csc_matrix((sax_i.shape[0], self.C.shape[0]))
@@ -190,7 +198,47 @@ class FiringGraph(object):
 
         sax_o = fto(self.O, sax_c)
 
+        if dropout_rate > 0:
+            dropout_func = vectorize(lambda x: binomial(int(x), 1 - dropout_rate) if x > 0 else 0)
+            sax_o.data = dropout_func(sax_o.data)
         return sax_o > 0
+
+    def propagate_np(self, sax_i, max_batch=150000, dropout_rate=0.):
+        """
+
+        :param sax_i:
+        :return:
+        """
+        import numpy as np
+
+        if sax_i.shape[0] > max_batch:
+            l_outputs, n = [], int(sax_i.shape[0] / max_batch) + 1
+            for i, j in  [(max_batch * i, max_batch * (i + 1)) for i in range(n)]:
+                l_outputs.append(self.propagate_np(sax_i[i:j, :]))
+            return np.vstack(l_outputs)
+
+        # Init core signal to all zeros
+        ax_c = np.zeros((sax_i.shape[0], self.C.shape[0]), dtype=np.uint16)
+        ax_i = sax_i.A.astype(np.uint16)
+        for i in range(self.depth - 1):
+
+            # Core transmit
+            # FTC
+            ax_c = ax_i.dot(self.I.A) + ax_c.dot(self.C.A)
+
+            # FPC
+            ax_c = (ax_c.astype(np.int32) - (self.levels - 1).clip(0) > 0).astype(np.uint16)
+
+            if i == 0:
+                ax_i = np.zeros(sax_i.shape, dtype=np.uint16)
+
+        # FTO
+        ax_o = ax_c.dot(self.O.A)
+
+        if dropout_rate > 0:
+            dropout_func = vectorize(lambda x: binomial(int(x), 1 - dropout_rate) if x > 0 else 0)
+            ax_o = dropout_func(ax_o)
+        return ax_o > 0
 
     def save_as_pickle(self, path):
         d_graph = self.to_dict()
@@ -212,7 +260,11 @@ class FiringGraph(object):
         }
 
         if deep_copy:
-            d_graph.update({'matrices': copy.deepcopy(self.matrices), 'ax_levels': self.levels.copy()})
+            d_graph.update({
+                'matrices': copy.deepcopy(self.matrices), 'ax_levels': self.levels.copy(),
+                'partitions': copy.deepcopy(self.partitions)
+            })
+
 
         return d_graph
 

@@ -50,7 +50,7 @@ class FileServer(object):
 
 class ArrayServer(object):
     def __init__(self, sax_forward, sax_backward, dtype_forward=int, dtype_backward=int, pattern_forward=None,
-                 pattern_backward=None, pattern_mask=None):
+                 pattern_backward=None, pattern_mask=None, dropout_mask=0):
 
         # Set sparse signals
         self.__sax_forward = sax_forward.tocsr()
@@ -66,6 +66,7 @@ class ArrayServer(object):
         # Set preprocessing patterns
         self.pattern_forward, self.pattern_backward = pattern_forward, pattern_backward
         self.pattern_mask = pattern_mask
+        self.dropout_mask = dropout_mask
 
         # Define streaming features
         self.step_forward, self.step_backward = 0, 0
@@ -78,6 +79,12 @@ class ArrayServer(object):
         assert self.step_forward == self.step_backward, "[SERVER]: Step of forward and backward differs"
         return self
 
+    def get_outputs(self):
+        if self.pattern_backward is None:
+            return {i: [i] for i in range(self.__sax_backward.shape[1])}
+        else:
+            return self.pattern_backward.get_io_mapping()
+
     @staticmethod
     def recursive_positions(step, n, n_max):
 
@@ -89,14 +96,15 @@ class ArrayServer(object):
 
         return l_positions
 
-    def next_forward(self, n=1):
+    def next_forward(self, n=1, update_step=True):
 
         # Compute indices
         l_positions = self.recursive_positions(self.step_forward, n, self.__sax_forward.shape[0])
-        sax_data = vstack([self.__sax_forward[start:end, :] for (start, end) in l_positions])
+        sax_data = vstack([self.__sax_forward[start:end, :].tocsr() for (start, end) in l_positions])
 
         # Compute new step of forward
-        self.step_forward = (self.step_forward + n) % self.__sax_forward.shape[0]
+        if update_step:
+            self.step_forward = (self.step_forward + n) % self.__sax_forward.shape[0]
 
         # Get process forward data
         if self.pattern_forward is not None:
@@ -106,14 +114,15 @@ class ArrayServer(object):
 
         return self
 
-    def next_backward(self, n=1):
+    def next_backward(self, n=1, update_step=True):
 
         # Compute indices
         l_positions = self.recursive_positions(self.step_backward, n, self.__sax_backward.shape[0])
-        sax_data = vstack([self.__sax_backward[start:end, :] for (start, end) in l_positions]).astype(int8)
+        sax_data = vstack([self.__sax_backward[start:end, :].tocsr() for (start, end) in l_positions]).astype(int8)
 
         # Compute new step of backward
-        self.step_backward = (self.step_backward + n) % self.__sax_backward.shape[0]
+        if update_step:
+            self.step_backward = (self.step_backward + n) % self.__sax_backward.shape[0]
 
         # Get process backward data
         if self.pattern_backward is not None:
@@ -124,8 +133,12 @@ class ArrayServer(object):
         # Propagate forward to get mask
         if self.pattern_mask is not None:
             sax_data = vstack([self.__sax_forward[start:end, :] for (start, end) in l_positions])
-            sax_data = self.pattern_mask.propagate(sax_data)
-            self.sax_mask_forward = sax_data.astype(self.dtype_forward)
+            sax_data = self.pattern_mask.propagate(sax_data,  dropout_rate=self.dropout_mask)
+
+            if self.pattern_backward is not None:
+                sax_data = self.pattern_backward.propagate(sax_data)
+
+            self.sax_mask_forward = sax_data.astype(self.dtype_backward)
 
         return self
 

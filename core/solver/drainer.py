@@ -54,18 +54,17 @@ class FiringGraphDrainer(object):
 
     def drain_all(self, n_max=10000, adapt_bs=False):
 
-        stop, n, max_batch_size = False, 0, self.bs
+        stop, n = False, 0
         while not stop:
-            for _ in range(int(max_batch_size / self.bs)):
-                # Drain and reset signals
-                self.drain()
-                self.reset_all()
+            # Drain and reset signals
+            self.drain()
+            self.reset_all()
 
             # Stop conditions
             if self.firing_graph.Im.nnz == 0 and self.firing_graph.Cm.nnz == 0 and self.firing_graph.Om.nnz == 0:
                 stop = True
 
-            n += max_batch_size
+            n += self.bs
             print("[Drainer]: {} samples has been propagated through firing graph".format(n))
 
             if n >= n_max:
@@ -73,7 +72,7 @@ class FiringGraphDrainer(object):
 
             # Adapt batch size if specified
             if adapt_bs and not stop and self.t > 0:
-                self.adapt_batch_size(max_batch_size)
+                self.adapt_batch_size(self.bs)
                 self.reset_all()
 
         return self
@@ -119,28 +118,6 @@ class FiringGraphDrainer(object):
 
         for _ in range(self.firing_graph.depth - 1):
             self.run_iteration(False, False)
-
-    def adapt_batch_size(self, max_batch_size):
-
-        l_batch_size = []
-        # With output matrix
-        if self.firing_graph.Om.nnz > 0:
-            sax_bfo = self.firing_graph.backward_firing['o'].multiply(self.firing_graph.Om)
-            l_batch_size += [max(min(self.t - sax_bfo.tocsc().max(), max_batch_size), 1)]
-
-        # With Core matrix
-        if self.firing_graph.Cm.nnz > 0:
-            sax_bfc = self.firing_graph.backward_firing['c'].multiply(self.firing_graph.Cm)
-            l_batch_size += [max(min(self.t - sax_bfc.tocsc().max(), max_batch_size), 1)]
-
-        # With Input matrix
-        if self.firing_graph.Im.nnz > 0:
-            sax_bfi = self.firing_graph.backward_firing['i'].multiply(self.firing_graph.Im)
-            l_batch_size += [max(min(self.t - sax_bfi.tocsc().max(), max_batch_size), 1)]
-
-        # Adapt batch size
-        batch_size = min(l_batch_size)
-        self.bs = int(max_batch_size / np.ceil(max_batch_size / batch_size))
 
     def forward_transmiting(self, load_input=True):
         # Get new input

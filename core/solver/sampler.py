@@ -9,12 +9,10 @@ class SupervisedSampler(object):
     This class implements a supervised sampler engine. It samples randomly input bit base on a concomitant activation
     of bit and output bit.
     """
-    def __init__(self, server, n_inputs, n_outputs, n_batch, p_sample=0.8, n_sampling=10, patterns=None, verbose=0):
+    def __init__(self, server, n_batch, p_sample=0.8, n_sampling=10, patterns=None, verbose=0):
         """
         :param server: Serve input and  output activation.
         :type server: core.tools.servers.ArrayServer
-        :param n_inputs: Number of input bit.
-        :param n_outputs: Number of input bit.
         :param n_batch: Number of input grid state to read for sampling.
         :param p_sample: Input bit's sampling rate in [0., 1.]
         :param n_sampling: Number of sampling.
@@ -23,7 +21,7 @@ class SupervisedSampler(object):
         :param verbose: Control display.
         """
         # size of problem
-        self.n_inputs, self.n_outputs, self.n_batch = n_inputs, n_outputs, n_batch
+        self.n_batch = n_batch
 
         # Sampling parameters
         self.p_sample, self.n_sampling = p_sample, n_sampling
@@ -60,11 +58,12 @@ class SupervisedSampler(object):
         :return: Current instance of the class.
         """
         # Init
-        self.samples = {i: [] for i in range(self.n_outputs)}
-        ax_selected, n = np.zeros(self.n_outputs, dtype=int), 0
+        n_outputs = sum([len(v) for k, v in self.server.get_outputs().items()])
+        self.samples = {i: [] for i in range(n_outputs)}
+        ax_selected, n = np.zeros(n_outputs, dtype=int), 0
         sax_i, sax_got = self.get_signal_batch()
 
-        for i in range(self.n_outputs):
+        for i, _ in self.server.get_outputs().items():
 
             # Selected random active
             ax_mask = sax_got.astype(bool)[:, i].toarray()[:, 0]
@@ -98,28 +97,26 @@ class SupervisedSampler(object):
         ax_selected, n = np.zeros(len(self.patterns), dtype=int), 0
         sax_i, sax_got = self.get_signal_batch()
 
-        for i in range(self.n_outputs):
-            l_pattern_sub = [(j, struct) for j, struct in enumerate(self.patterns) if i in struct.O.nonzero()[1]]
+        for i, pat in enumerate(self.patterns):
+            # Get current pattern input bit
+            l_pat_indices = list(set(pat.I.nonzero()[0]))
+            sax_pat = pat.propagate(sax_i)[:, pat.index_output]
 
-            for j, pat in l_pattern_sub:
-                l_pat_indices = list(set(pat.I.nonzero()[0]))
-                sax_pat = pat.propagate(sax_i)[:, i]
+            # selected random active
+            ax_mask = sax_pat.multiply(sax_got[:, pat.index_output]).astype(bool).toarray()[:, 0]
+            n_sampling = min(ax_mask.sum(), self.n_sampling)
 
-                # selected random active
-                ax_mask = sax_pat.multiply(sax_got[:, i]).astype(bool).toarray()[:, 0]
-                n_sampling = min(ax_mask.sum(), self.n_sampling)
+            if n_sampling > 0:
+                # Randomly Select grid state at target activations
+                l_sampled_indices = np.random.choice(range(int(ax_mask.sum())), size=n_sampling, replace=False)
+                sax_samples = sax_i[ax_mask, :][l_sampled_indices, :]
 
-                if n_sampling > 0:
-                    # Randomly Select grid state at target activations
-                    l_sampled_indices = np.random.choice(range(int(ax_mask.sum())), size=n_sampling, replace=False)
-                    sax_samples = sax_i[ax_mask, :][l_sampled_indices, :]
-
-                    # Sample active bits of selected grid state
-                    ax_indices = np.array([ind for ind in sax_samples.nonzero()[1] if ind not in l_pat_indices])
-                    ax_mask = np.random.binomial(1, self.p_sample, len(ax_indices)).astype(bool)
-                    if ax_mask.any():
-                        self.samples[j].extend(set(ax_indices[ax_mask]))
-                        ax_selected[j] += 1
+                # Sample active bits of selected grid state
+                ax_indices = np.array([ind for ind in sax_samples.nonzero()[1] if ind not in l_pat_indices])
+                ax_mask = np.random.binomial(1, self.p_sample, len(ax_indices)).astype(bool)
+                if ax_mask.any():
+                    self.samples[i].extend(set(ax_indices[ax_mask]))
+                    ax_selected[i] += 1
 
         print("[Sampler]: Discriminative sampling for {} targets".format(ax_selected.sum()))
         return self
