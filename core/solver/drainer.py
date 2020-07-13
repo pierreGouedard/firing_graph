@@ -65,8 +65,6 @@ class FiringGraphDrainer(object):
                 stop = True
 
             n += self.bs
-            print("[Drainer]: {} samples has been propagated through firing graph".format(n))
-
             if n >= n_max:
                 stop = True
 
@@ -74,6 +72,8 @@ class FiringGraphDrainer(object):
             if adapt_bs and not stop and self.t > 0:
                 self.adapt_batch_size(self.bs)
                 self.reset_all()
+
+        print("[Drainer]: {} samples has been propagated through firing graph".format(n))
 
         return self
 
@@ -85,6 +85,7 @@ class FiringGraphDrainer(object):
             # Condition of stop that has to be put in the drainer
             if self.firing_graph.Im.nnz == 0 and self.firing_graph.Cm.nnz == 0 and self.firing_graph.Om.nnz == 0:
                 early_stopping = True
+                self.server.synchonize_steps()
                 break
 
             # Increment count iteration

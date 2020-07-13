@@ -94,8 +94,7 @@ def fpc(sax_c, sax_cm, ax_levels):
     """
 
     # Compare forward strength to level for activation
-    ax_levels = (ax_levels - 1).clip(min=0)[newaxis, :].repeat(sax_c.shape[0], axis=0)
-    sax_c = csr_matrix(sax_c.astype(int) - ax_levels > 0).astype(sax_c.dtype)
+    sax_c =  (sax_c > (sax_c > 0).dot(diags((ax_levels - 1).clip(min=0), format='csc'))).astype(sax_c.dtype)
 
     # Get forward signal
     if sax_cm is not None:

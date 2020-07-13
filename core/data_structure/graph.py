@@ -2,7 +2,7 @@
 import pickle
 import random
 import string
-from scipy.sparse import csc_matrix, vstack
+from scipy.sparse import csc_matrix, vstack, diags
 import copy
 from numpy import uint32, vectorize
 from numpy.random import binomial
@@ -19,7 +19,7 @@ class FiringGraph(object):
 
     """
     def __init__(self, project, ax_levels, matrices, depth=2, graph_id=None, is_drained=False, partitions=None,
-                 precision=None, backward_firing=None):
+                 precision=None, score=None, backward_firing=None):
 
         if graph_id is None:
             graph_id = ''.join([random.choice(string.ascii_letters) for _ in range(5)])
@@ -40,6 +40,7 @@ class FiringGraph(object):
         # set additional (optional) util attribute
         self.partitions = partitions
         self.precision = precision
+        self.score = score
 
         # Set backward tracking matrices
         if backward_firing is None:
@@ -84,6 +85,10 @@ class FiringGraph(object):
     @property
     def Im(self):
         return self.matrices['Im']
+
+    def reset_backward_firing(self):
+        self.backward_firing = utils.create_empty_backward_firing( self.I.shape[0], self.O.shape[1], self.C.shape[0])
+        return self
 
     def update_backward_firing(self, key, sax_M):
 
@@ -201,44 +206,44 @@ class FiringGraph(object):
         if dropout_rate > 0:
             dropout_func = vectorize(lambda x: binomial(int(x), 1 - dropout_rate) if x > 0 else 0)
             sax_o.data = dropout_func(sax_o.data)
+
         return sax_o > 0
 
-    def propagate_np(self, sax_i, max_batch=150000, dropout_rate=0.):
+
+    def propagate_value(self, sax_i, ax_value, max_batch=50000):
         """
 
         :param sax_i:
         :return:
         """
-        import numpy as np
 
+        # If input size too large, then split work
         if sax_i.shape[0] > max_batch:
             l_outputs, n = [], int(sax_i.shape[0] / max_batch) + 1
-            for i, j in  [(max_batch * i, max_batch * (i + 1)) for i in range(n)]:
-                l_outputs.append(self.propagate_np(sax_i[i:j, :]))
-            return np.vstack(l_outputs)
+            for i, j in [(max_batch * i, max_batch * (i + 1)) for i in range(n)]:
+                l_outputs.append(self.propagate_value(sax_i[i:j, :], ax_value))
+
+            return vstack(l_outputs)
 
         # Init core signal to all zeros
-        ax_c = np.zeros((sax_i.shape[0], self.C.shape[0]), dtype=np.uint16)
-        ax_i = sax_i.A.astype(np.uint16)
+        sax_c = csc_matrix((sax_i.shape[0], self.C.shape[0]))
+
         for i in range(self.depth - 1):
 
             # Core transmit
-            # FTC
-            ax_c = ax_i.dot(self.I.A) + ax_c.dot(self.C.A)
-
-            # FPC
-            ax_c = (ax_c.astype(np.int32) - (self.levels - 1).clip(0) > 0).astype(np.uint16)
+            sax_c = ftc(self.C, self.I, sax_c, sax_i.astype(int))
+            sax_c = fpc(sax_c, None, self.levels)
 
             if i == 0:
-                ax_i = np.zeros(sax_i.shape, dtype=np.uint16)
+                sax_i = csc_matrix(sax_i.shape)
 
-        # FTO
-        ax_o = ax_c.dot(self.O.A)
+        # Propagate value
+        sax_o_count = fto(self.O, sax_c)
+        sax_o_value = fto(self.O, sax_c.dot(diags(ax_value, format='csc')))
+        sax_o_value[sax_o_value > 0] /= sax_o_count[sax_o_value > 0]
 
-        if dropout_rate > 0:
-            dropout_func = vectorize(lambda x: binomial(int(x), 1 - dropout_rate) if x > 0 else 0)
-            ax_o = dropout_func(ax_o)
-        return ax_o > 0
+        return sax_o_value
+
 
     def save_as_pickle(self, path):
         d_graph = self.to_dict()
@@ -257,6 +262,7 @@ class FiringGraph(object):
             'depth': self.depth,
             'partitions': self.partitions,
             'precision': self.precision,
+            'score': self.score
         }
 
         if deep_copy:

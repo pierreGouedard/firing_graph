@@ -53,10 +53,12 @@ class ArrayServer(object):
                  pattern_backward=None, pattern_mask=None, dropout_mask=0):
 
         # Set sparse signals
+        self.n_label = sax_backward.shape[1]
         self.__sax_forward = sax_forward.tocsr()
         self.__sax_backward = sax_backward
         self.dtype_forward = dtype_forward
         self.dtype_backward = dtype_backward
+
 
         # Initialize data
         self.sax_data_forward = None
@@ -79,11 +81,9 @@ class ArrayServer(object):
         assert self.step_forward == self.step_backward, "[SERVER]: Step of forward and backward differs"
         return self
 
-    def get_outputs(self):
-        if self.pattern_backward is None:
-            return {i: [i] for i in range(self.__sax_backward.shape[1])}
-        else:
-            return self.pattern_backward.get_io_mapping()
+    def synchonize_steps(self):
+        step = max(self.step_forward, self.step_backward)
+        self.step_forward, self.step_backward = step, step
 
     @staticmethod
     def recursive_positions(step, n, n_max):

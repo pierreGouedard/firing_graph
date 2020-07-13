@@ -9,7 +9,7 @@ class SupervisedSampler(object):
     This class implements a supervised sampler engine. It samples randomly input bit base on a concomitant activation
     of bit and output bit.
     """
-    def __init__(self, server, n_batch, p_sample=0.8, n_sampling=10, patterns=None, verbose=0):
+    def __init__(self, server, n_batch, p_sample=0.8, patterns=None, verbose=0):
         """
         :param server: Serve input and  output activation.
         :type server: core.tools.servers.ArrayServer
@@ -24,7 +24,7 @@ class SupervisedSampler(object):
         self.n_batch = n_batch
 
         # Sampling parameters
-        self.p_sample, self.n_sampling = p_sample, n_sampling
+        self.p_sample = p_sample
 
         # Utils parameters
         self.verbose = verbose
@@ -58,16 +58,21 @@ class SupervisedSampler(object):
         :return: Current instance of the class.
         """
         # Init
-        n_outputs = sum([len(v) for k, v in self.server.get_outputs().items()])
-        self.samples = {i: [] for i in range(n_outputs)}
-        ax_selected, n = np.zeros(n_outputs, dtype=int), 0
+        if self.server.pattern_backward is None:
+            n_outputs = self.server.n_label
+        else:
+            n_outputs = self.server.pattern_backward.O.shape[1]
+
+        self.samples, ax_selected, n = {i: [] for i in range(n_outputs)}, np.zeros(n_outputs, dtype=int), 0
+
+        # Gte signal to sampled
         sax_i, sax_got = self.get_signal_batch()
 
-        for i, _ in self.server.get_outputs().items():
+        for i in range(self.server.n_label):
 
             # Selected random active
             ax_mask = sax_got.astype(bool)[:, i].toarray()[:, 0]
-            n_sampling = min(ax_mask.sum(), self.n_sampling)
+            n_sampling = min(ax_mask.sum(), 1)
 
             if n_sampling > 0:
 
@@ -100,11 +105,11 @@ class SupervisedSampler(object):
         for i, pat in enumerate(self.patterns):
             # Get current pattern input bit
             l_pat_indices = list(set(pat.I.nonzero()[0]))
-            sax_pat = pat.propagate(sax_i)[:, pat.index_output]
+            sax_pat = pat.propagate(sax_i)[:, pat.output_id]
 
             # selected random active
-            ax_mask = sax_pat.multiply(sax_got[:, pat.index_output]).astype(bool).toarray()[:, 0]
-            n_sampling = min(ax_mask.sum(), self.n_sampling)
+            ax_mask = sax_pat.multiply(sax_got[:, pat.output_id]).astype(bool).toarray()[:, 0]
+            n_sampling = min(ax_mask.sum(), 1)
 
             if n_sampling > 0:
                 # Randomly Select grid state at target activations
