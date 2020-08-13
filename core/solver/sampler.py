@@ -123,5 +123,7 @@ class SupervisedSampler(object):
                     self.samples[i].extend(set(ax_indices[ax_mask]))
                     ax_selected[i] += 1
 
-        print("[Sampler]: Discriminative sampling for {} targets".format(ax_selected.sum()))
+        print("[Sampler]: Discriminative sampling for {} targets (out of {}) ".format(
+            ax_selected.sum(), len(self.patterns)
+        ))
         return self

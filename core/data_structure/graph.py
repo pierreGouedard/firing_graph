@@ -210,7 +210,7 @@ class FiringGraph(object):
         return sax_o > 0
 
 
-    def propagate_value(self, sax_i, ax_value, max_batch=50000):
+    def propagate_value(self, sax_i, ax_value, max_batch=20000):
         """
 
         :param sax_i:
@@ -222,7 +222,6 @@ class FiringGraph(object):
             l_outputs, n = [], int(sax_i.shape[0] / max_batch) + 1
             for i, j in [(max_batch * i, max_batch * (i + 1)) for i in range(n)]:
                 l_outputs.append(self.propagate_value(sax_i[i:j, :], ax_value))
-
             return vstack(l_outputs)
 
         # Init core signal to all zeros
