@@ -1,5 +1,6 @@
 # Global import
 import numpy as np
+import time
 
 # local import
 
@@ -9,7 +10,7 @@ class SupervisedSampler(object):
     This class implements a supervised sampler engine. It samples randomly input bit base on a concomitant activation
     of bit and output bit.
     """
-    def __init__(self, server, n_batch, p_sample=0.8, patterns=None, verbose=0):
+    def __init__(self, server, n_batch, p_sample=0.8, pattern=None, verbose=0):
         """
         :param server: Serve input and  output activation.
         :type server: core.tools.servers.ArrayServer
@@ -30,7 +31,7 @@ class SupervisedSampler(object):
         self.verbose = verbose
 
         # Core attributes
-        self.patterns = patterns
+        self.pattern = pattern
         self.samples = None
         self.server = server
 
@@ -67,7 +68,6 @@ class SupervisedSampler(object):
 
         # Gte signal to sampled
         sax_i, sax_got = self.get_signal_batch()
-
         for i in range(self.server.n_label):
 
             # Selected random active
@@ -87,7 +87,7 @@ class SupervisedSampler(object):
                     self.samples[i].extend(set(ax_indices[ax_mask]))
                     ax_selected[i] += 1
 
-        print("[Sampler]: Generative sampling for {} targets".format(ax_selected.sum()))
+        print("[Sampler]: Generative sampling for {} targets.".format(ax_selected.sum()))
         return self
 
     def discriminative_sampling(self):
@@ -98,17 +98,19 @@ class SupervisedSampler(object):
         :return:
         """
         # Init
-        self.samples = {i: [] for i in range(len(self.patterns))}
-        ax_selected, n = np.zeros(len(self.patterns), dtype=int), 0
+        tic = time.time()
+        self.samples = {i: [] for i in range(len(self.pattern.partitions))}
+        ax_selected, n = np.zeros(len(self.pattern.partitions), dtype=int), 0
         sax_i, sax_got = self.get_signal_batch()
+        sax_data = self.pattern.propagate(sax_i)
 
-        for i, pat in enumerate(self.patterns):
+        for i, p in enumerate(self.pattern.partitions):
             # Get current pattern input bit
-            l_pat_indices = list(set(pat.I.nonzero()[0]))
-            sax_pat = pat.propagate(sax_i)[:, pat.output_id]
+            l_pat_indices = list(set(self.pattern.I[:, p['indices']].nonzero()[0]))
+            sax_pat = sax_data[:, p['output_id']]
 
             # selected random active
-            ax_mask = sax_pat.multiply(sax_got[:, pat.output_id]).astype(bool).toarray()[:, 0]
+            ax_mask = sax_pat.multiply(sax_got[:, p['output_id']]).astype(bool).toarray()[:, 0]
             n_sampling = min(ax_mask.sum(), 1)
 
             if n_sampling > 0:
@@ -123,7 +125,7 @@ class SupervisedSampler(object):
                     self.samples[i].extend(set(ax_indices[ax_mask]))
                     ax_selected[i] += 1
 
-        print("[Sampler]: Discriminative sampling for {} targets (out of {}) ".format(
-            ax_selected.sum(), len(self.patterns)
+        print("[Sampler]: Discriminative sampling for {} targets (out of {}). duration {}".format(
+            ax_selected.sum(), len(self.pattern.partitions), time.time() - tic
         ))
         return self
