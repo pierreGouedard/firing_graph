@@ -5,7 +5,7 @@ import string
 from scipy.sparse import csc_matrix, vstack, diags
 import copy
 from numpy import uint32, vectorize
-from numpy.random import binomial
+from numpy.random import binomial, seed
 # Local import
 from ..data_structure import utils
 from ..tools.equations.forward import ftc, fto, fpc
@@ -184,10 +184,9 @@ class FiringGraph(object):
         # If input size too large, then split work
         if sax_i.shape[0] > max_batch:
             l_outputs, n = [], int(sax_i.shape[0] / max_batch) + 1
-            for i, j in  [(max_batch * i, max_batch * (i + 1)) for i in range(n)]:
+            for i, j in [(max_batch * i, max_batch * (i + 1)) for i in range(n)]:
                 l_outputs.append(self.propagate(sax_i[i:j, :]))
             return vstack(l_outputs)
-
 
         # Init core signal to all zeros
         sax_c = csc_matrix((sax_i.shape[0], self.C.shape[0]))
