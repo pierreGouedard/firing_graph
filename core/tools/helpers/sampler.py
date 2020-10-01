@@ -7,7 +7,7 @@ import time
 
 class SupervisedSampler(object):
     """
-    This class implements a supervised sampler engine. It samples randomly input bit base on a concomitant activation
+    This class implements a supervised samplers engine. It samples randomly input bit base on a concomitant activation
     of bit and output bit.
     """
     def __init__(self, server, n_batch, p_sample=0.8, pattern=None, verbose=0):
@@ -128,4 +128,48 @@ class SupervisedSampler(object):
         print("[Sampler]: Discriminative sampling for {} targets (out of {}). duration {}".format(
             ax_selected.sum(), len(self.pattern.partitions), time.time() - tic
         ))
+        return self
+
+
+class YalaSampler(object):
+    """
+    This class implements a supervised samplers engine. It samples randomly input bit base on a concomitant activation
+    of bit and output bit.
+    """
+    def __init__(self, mapping_feature_input, p_sample=0.8, verbose=0):
+        """
+        :param server: Serve input and  output activation.
+        :type server: core.tools.servers.ArrayServer
+        :param n_batch: Number of input grid state to read for sampling.
+        :param p_sample: Input bit's sampling rate in [0., 1.]
+        :param n_sampling: Number of sampling.
+        :param patterns: firing graph.
+        :type patterns: core.data_structure.firing_graph.FiringGraph.
+        :param verbose: Control display.
+        """
+        self.p_sample = p_sample
+        self.mapping_feature_input = mapping_feature_input
+        self.verbose = verbose
+        self.samples = {}
+
+    def sample(self, n):
+        """
+        For each output bit, at n_sampling occasions, sample randomly activated input grid's bit when output bit is
+        also active and the input grid does not activate firing_graph, if any set.
+
+        :return: Current instance of the class.
+        """
+
+        for i in range(n):
+            # Sample feature
+            ax_feature_mask = np.random.binomial(1, self.p_sample, self.mapping_feature_input.shape[1]).astype(bool)
+
+            # Get input linked to sampled features
+            ax_input_mask = self.mapping_feature_input.dot(np.diag(ax_feature_mask)).sum(axis=1) > 0
+
+            # add inputes  to samples
+            self.samples[i] = ax_input_mask.nonzero()[0]
+
+        print("[Sampler]: {} sampling of features.".format(n))
+
         return self

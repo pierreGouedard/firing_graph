@@ -6,6 +6,7 @@ from scipy.sparse import csc_matrix, vstack, diags
 import copy
 from numpy import uint32, vectorize
 from numpy.random import binomial
+
 # Local import
 from ..data_structure import utils
 from ..tools.equations.forward import ftc, fto, fpc
@@ -185,7 +186,9 @@ class FiringGraph(object):
         if sax_i.shape[0] > max_batch:
             l_outputs, n = [], int(sax_i.shape[0] / max_batch) + 1
             for i, j in [(max_batch * i, max_batch * (i + 1)) for i in range(n)]:
-                l_outputs.append(self.propagate(sax_i[i:j, :]))
+                if i >= sax_i.shape[0]:
+                    continue
+                l_outputs.append(self.propagate(sax_i[i:j, :], dropout_rate=dropout_rate))
             return vstack(l_outputs)
 
         # Init core signal to all zeros
@@ -201,7 +204,6 @@ class FiringGraph(object):
                 sax_i = csc_matrix(sax_i.shape)
 
         sax_o = fto(self.O, sax_c)
-
         if dropout_rate > 0:
             dropout_func = vectorize(lambda x: binomial(int(x), 1 - dropout_rate) if x > 0 else 0)
             sax_o.data = dropout_func(sax_o.data)
@@ -268,7 +270,6 @@ class FiringGraph(object):
                 'matrices': copy.deepcopy(self.matrices), 'ax_levels': self.levels.copy(),
                 'partitions': copy.deepcopy(self.partitions)
             })
-
 
         return d_graph
 
