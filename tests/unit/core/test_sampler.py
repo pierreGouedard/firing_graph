@@ -1,20 +1,20 @@
 # Global imports
 import unittest
 import numpy as np
-from scipy.sparse import csc_matrix, lil_matrix
+from scipy.sparse import lil_matrix
 
 # Local import
-from core.tools.helpers.servers import ArrayServer
-from core.solver.sampler import SupervisedSampler
-from core.data_structure.graph import FiringGraph
-from core.data_structure.utils import create_empty_matrices
+from firing_graph.tools.helpers.servers import ArrayServer
+from firing_graph.tools.helpers.sampler import SupervisedSampler
+from firing_graph.data_structure.graph import FiringGraph
+from firing_graph.data_structure.utils import create_empty_matrices
 __maintainer__ = 'Pierre Gouedard'
 
 
 class TestSampler(unittest.TestCase):
     def setUp(self):
 
-        # Set core parameters
+        # Set firing_graph parameters
         self.ni, self.no, self.weight = 100, 2, 10
         self.l_outputs = [[1, 11, 21, 31, 41, 51, 61, 71, 81, 91], [0, 25, 50, 75]]
 
@@ -37,10 +37,10 @@ class TestSampler(unittest.TestCase):
 
     def test_generative_sampling(self):
         """
-        python -m unittest tests.unit.core.test_sampler.TestSampler.test_generative_sampling
+        python -m unittest tests.unit.firing_graph.test_sampler.TestSampler.test_generative_sampling
 
         """
-        # Instantiate sampler
+        # Instantiate samplers
         server = init_server(self.sax_inputs, self.sax_outputs)
 
         # Sampling with p_sample=0
@@ -67,10 +67,10 @@ class TestSampler(unittest.TestCase):
 
     def test_discriminative_sampling(self):
         """
-        python -m unittest tests.unit.core.test_sampler.TestSampler.test_discriminative_sampling
+        python -m unittest tests.unit.firing_graph.test_sampler.TestSampler.test_discriminative_sampling
 
         """
-        # Instantiate sampler
+        # Instantiate samplers
         server = init_server(self.sax_inputs, self.sax_outputs)
 
         # Sampling with p_sample=0

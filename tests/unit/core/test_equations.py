@@ -3,10 +3,10 @@ import unittest
 import numpy as np
 from scipy.sparse import csc_matrix
 
-from core.data_structure.utils import mat_from_tuples
-from core.data_structure.graph import FiringGraph
-from core.tools.helpers.servers import ArrayServer
-from core.solver.drainer import FiringGraphDrainer
+from firing_graph.data_structure.utils import mat_from_tuples
+from firing_graph.data_structure.graph import FiringGraph
+from firing_graph.tools.helpers.servers import ArrayServer
+from firing_graph.solver.drainer import FiringGraphDrainer
 
 __maintainer__ = 'Pierre Gouedard'
 
@@ -84,7 +84,7 @@ class TestEquations(unittest.TestCase):
     def test_forward(self):
         """
         Very precise case on very simple graph to validate basics of drainer for forward equations
-        python -m unittest tests.unit.core.test_equations.TestEquations.test_forward
+        python -m unittest tests.unit.firing_graph.test_equations.TestEquations.test_forward
 
         """
 
@@ -103,7 +103,7 @@ class TestEquations(unittest.TestCase):
     def test_backward(self):
         """
         Very precise case on very simple graph to validate basics of drainer for backward equations
-        python -m unittest tests.unit.core.test_equations.TestEquations.test_backward
+        python -m unittest tests.unit.firing_graph.test_equations.TestEquations.test_backward
 
         """
         # Create server and drainer
@@ -137,7 +137,7 @@ class TestEquations(unittest.TestCase):
         ax_O_expected = ax_O_expected + (ax_O_expected != 0) * self.weight
         ax_O_track = np.array([[2,  0.], [1.,  0.], [0.,  2.]])
 
-        # Check correctness of core structure updates
+        # Check correctness of firing_graph structure updates
         self.assertTrue((drainer.firing_graph.Ow.toarray() == ax_O_expected).all())
         self.assertTrue((drainer.firing_graph.backward_firing['o'].toarray() == ax_O_track).all())
 
@@ -158,7 +158,7 @@ class TestEquations(unittest.TestCase):
     def test_drain_mask(self):
         """
         Very precise case on very simple graph to validate effectiveness of mask for draining
-        python -m unittest tests.unit.core.test_equations.TestEquations.test_drain_mask
+        python -m unittest tests.unit.firing_graph.test_equations.TestEquations.test_drain_mask
 
         """
         # Create server and drainer
@@ -190,7 +190,7 @@ class TestEquations(unittest.TestCase):
         ax_O_expected = ax_O_expected + (ax_O_expected != 0) * self.weight
         ax_O_track = np.array([[2,  0.], [1.,  0.], [0.,  2.]])
 
-        # Check correctness of core structure updates
+        # Check correctness of firing_graph structure updates
         self.assertTrue((drainer.firing_graph.Ow.toarray() == ax_O_expected).all())
         self.assertTrue((drainer.firing_graph.backward_firing['o'].toarray() == ax_O_track).all())
         self.assertTrue((drainer.firing_graph.Iw.toarray() == self.fga.Iw.toarray()).all())

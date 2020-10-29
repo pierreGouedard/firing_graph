@@ -4,10 +4,10 @@ import numpy as np
 from scipy.sparse import csc_matrix
 
 # Local import
-from core.tools.helpers.servers import ArrayServer
-from core.data_structure.graph import FiringGraph
-from core.data_structure.utils import create_empty_matrices
-from core.tools.equations.forward import fpo
+from firing_graph.tools.helpers.servers import ArrayServer
+from firing_graph.data_structure.graph import FiringGraph
+from firing_graph.data_structure.utils import create_empty_matrices
+from firing_graph.tools.equations.forward import fpo
 
 
 class TestServer(unittest.TestCase):
@@ -45,7 +45,7 @@ class TestServer(unittest.TestCase):
 
     def test_server_no_mask(self):
         """
-        python -m unittest tests.unit.core.test_server.TestServer.test_server_no_mask
+        python -m unittest tests.unit.firing_graph.test_server.TestServer.test_server_no_mask
 
         """
         # stream once
@@ -75,7 +75,7 @@ class TestServer(unittest.TestCase):
 
     def test_server_mask_pattern(self):
         """
-        python -m unittest tests.unit.core.test_server.TestServer.test_server_mask_pattern
+        python -m unittest tests.unit.firing_graph.test_server.TestServer.test_server_mask_pattern
 
         """
 

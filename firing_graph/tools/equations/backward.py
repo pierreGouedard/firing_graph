@@ -8,11 +8,11 @@ def btc(sax_ob, sax_cb, sax_cm, sax_O, sax_C):
 
     :param sax_ob: output backward signal
     :type sax_ob: scipy.sparse.spmatrix
-    :param sax_cb: core backward signal
+    :param sax_cb: firing_graph backward signal
     :type sax_cb: scipy.sparse.spmatrix
-    :param sax_O: adjacency matrix from core vertices toward output vertices
+    :param sax_O: adjacency matrix from firing_graph vertices toward output vertices
     :type sax_O: scipy.sparse.spmatrix
-    :param sax_C: adjacency matrix from core vertices toward core vertices
+    :param sax_C: adjacency matrix from firing_graph vertices toward firing_graph vertices
     :type sax_C: scipy.sparse.spmatrix
     :return: backward signal
     :rtype: scipy.sparse.spmatrix

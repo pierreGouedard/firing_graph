@@ -5,7 +5,8 @@ import string
 from scipy.sparse import csc_matrix, vstack, diags
 import copy
 from numpy import uint32, vectorize
-from numpy.random import binomial, seed
+from numpy.random import binomial
+
 # Local import
 from ..data_structure import utils
 from ..tools.equations.forward import ftc, fto, fpc
@@ -13,7 +14,7 @@ from ..tools.equations.forward import ftc, fto, fpc
 
 class FiringGraph(object):
     """
-    This class implement the main data structure used for fiting data. It is composed of weighted link in the form of
+    This class implement the main data structure used for fitting data. It is composed of weighted link in the form of
     scipy.sparse matrices and store complement information on vertices such as levels, mask for draining. It also keep
     track of the firing of vertices.
 
@@ -29,7 +30,7 @@ class FiringGraph(object):
         self.graph_id = graph_id
         self.is_drained = is_drained
 
-        # architecture core params
+        # architecture firing_graph params
         self.depth = depth
         self.levels = ax_levels
 
@@ -174,7 +175,7 @@ class FiringGraph(object):
         """
         return FiringGraph(**d_graph)
 
-    def propagate(self, sax_i, max_batch=50000, dropout_rate=0.):
+    def propagate(self, sax_i, max_batch=50000, return_activations=True):
         """
 
         :param sax_i:
@@ -185,10 +186,12 @@ class FiringGraph(object):
         if sax_i.shape[0] > max_batch:
             l_outputs, n = [], int(sax_i.shape[0] / max_batch) + 1
             for i, j in [(max_batch * i, max_batch * (i + 1)) for i in range(n)]:
-                l_outputs.append(self.propagate(sax_i[i:j, :]))
+                if i >= sax_i.shape[0]:
+                    continue
+                l_outputs.append(self.propagate(sax_i[i:j, :], return_activations=return_activations))
             return vstack(l_outputs)
 
-        # Init core signal to all zeros
+        # Init firing_graph signal to all zeros
         sax_c = csc_matrix((sax_i.shape[0], self.C.shape[0]))
 
         for i in range(self.depth - 1):
@@ -202,12 +205,10 @@ class FiringGraph(object):
 
         sax_o = fto(self.O, sax_c)
 
-        if dropout_rate > 0:
-            dropout_func = vectorize(lambda x: binomial(int(x), 1 - dropout_rate) if x > 0 else 0)
-            sax_o.data = dropout_func(sax_o.data)
-
-        return sax_o > 0
-
+        if return_activations:
+            return sax_o > 0
+        else:
+            return sax_o
 
     def propagate_value(self, sax_i, ax_value, max_batch=20000):
         """
@@ -215,17 +216,17 @@ class FiringGraph(object):
         :param sax_i:
         :return:
         """
-
         # If input size too large, then split work
         if sax_i.shape[0] > max_batch:
             l_outputs, n = [], int(sax_i.shape[0] / max_batch) + 1
             for i, j in [(max_batch * i, max_batch * (i + 1)) for i in range(n)]:
+                if i >= sax_i.shape[0]:
+                    continue
                 l_outputs.append(self.propagate_value(sax_i[i:j, :], ax_value))
             return vstack(l_outputs)
 
-        # Init core signal to all zeros
+        # Init firing_graph signal to all zeros
         sax_c = csc_matrix((sax_i.shape[0], self.C.shape[0]))
-
         for i in range(self.depth - 1):
 
             # Core transmit
@@ -241,7 +242,6 @@ class FiringGraph(object):
         sax_o_value[sax_o_value > 0] /= sax_o_count[sax_o_value > 0]
 
         return sax_o_value
-
 
     def save_as_pickle(self, path):
         d_graph = self.to_dict()
@@ -268,7 +268,6 @@ class FiringGraph(object):
                 'matrices': copy.deepcopy(self.matrices), 'ax_levels': self.levels.copy(),
                 'partitions': copy.deepcopy(self.partitions)
             })
-
 
         return d_graph
 

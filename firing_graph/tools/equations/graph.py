@@ -5,14 +5,14 @@
 
 def buo(sax_ob, sax_cm, firing_graph):
     """
-    Update adjacency matrix from core vertices toward output vertices
+    Update adjacency matrix from firing_graph vertices toward output vertices
 
     :param sax_ob: output backward signal
     :type sax_ob: scipy.sparse.spmatrix
-    :param sax_cm: core forward signal memory
+    :param sax_cm: firing_graph forward signal memory
     :type: scipy.sparse.spmatrix
     :param firing_graph:
-    :type firing_graph: deyep.core.data_structure.graph.FiringGraph
+    :type firing_graph: deyep.firing_graph.data_structure.graph.FiringGraph
     :return: Update of adjacency matrice
     :rtype: scipy.sparse.spmatrix
     """
@@ -38,14 +38,14 @@ def buo(sax_ob, sax_cm, firing_graph):
 
 def buc(sax_cb, sax_cm, firing_graph):
     """
-    Update adjacency matrix from core vertices toward core vertices
+    Update adjacency matrix from firing_graph vertices toward firing_graph vertices
 
-    :param sax_cb: core backward signal
+    :param sax_cb: firing_graph backward signal
     :type sax_cb: scipy.sparse.spmatrix
-    :param sax_cm: core forward signal memory
+    :param sax_cm: firing_graph forward signal memory
     :type: sax_cm scipy.sparse.spmatrix
     :param firing_graph:
-    :type firing_graph: deyep.core.data_structure.graph.FiringGraph
+    :type firing_graph: deyep.firing_graph.data_structure.graph.FiringGraph
     :return: update of adjacency matrix
     :rtype: scipy.sparse.spmatrix
     """
@@ -71,14 +71,14 @@ def buc(sax_cb, sax_cm, firing_graph):
 
 def bui(sax_cb, sax_im, firing_graph):
     """
-    Update adjacency matrix from input vertices toward core vertices
+    Update adjacency matrix from input vertices toward firing_graph vertices
 
-    :param sax_cb: core backward signal
+    :param sax_cb: firing_graph backward signal
     :type sax_cb: scipy.sparse.spmatrix
     :param sax_im: input forward signal memory
     :type: sax_im: scipy.sparse.spmatrix
     :param firing_graph:
-    :type firing_graph: deyep.core.data_structure.graph.FiringGraph
+    :type firing_graph: deyep.firing_graph.data_structure.graph.FiringGraph
     :return: update of adjacency matrix
     :rtype: scipy.sparse.spmatrix
     """

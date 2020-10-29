@@ -1,7 +1,7 @@
 # Global import
 import numpy as np
 import time
-
+from scipy.sparse import hstack
 # local import
 
 
@@ -13,12 +13,12 @@ class SupervisedSampler(object):
     def __init__(self, server, n_batch, p_sample=0.8, pattern=None, verbose=0):
         """
         :param server: Serve input and  output activation.
-        :type server: core.tools.servers.ArrayServer
+        :type server: firing_graph.tools.servers.ArrayServer
         :param n_batch: Number of input grid state to read for sampling.
         :param p_sample: Input bit's sampling rate in [0., 1.]
         :param n_sampling: Number of sampling.
         :param patterns: firing graph.
-        :type patterns: core.data_structure.firing_graph.FiringGraph.
+        :type patterns: firing_graph.data_structure.firing_graph.FiringGraph.
         :param verbose: Control display.
         """
         # size of problem
@@ -128,4 +128,56 @@ class SupervisedSampler(object):
         print("[Sampler]: Discriminative sampling for {} targets (out of {}). duration {}".format(
             ax_selected.sum(), len(self.pattern.partitions), time.time() - tic
         ))
+        return self
+
+
+class YalaSampler(object):
+    """
+    This class implements a supervised samplers engine. It samples randomly input bit base on a concomitant activation
+    of bit and output bit.
+    """
+    def __init__(self, mapping_feature_input, p_sample=0.8, verbose=0):
+        """
+        :param server: Serve input and  output activation.
+        :type server: firing_graph.tools.servers.ArrayServer
+        :param n_batch: Number of input grid state to read for sampling.
+        :param p_sample: Input bit's sampling rate in [0., 1.]
+        :param n_sampling: Number of sampling.
+        :param patterns: firing graph.
+        :type patterns: firing_graph.data_structure.firing_graph.FiringGraph.
+        :param verbose: Control display.
+        """
+        self.p_sample = p_sample
+        self.mapping_feature_input = mapping_feature_input
+        self.verbose = verbose
+        self.samples = {}
+
+    def sample(self, n, l_patterns=None):
+        """
+        For each output bit, at n_sampling occasions, sample randomly activated input grid's bit when output bit is
+        also active and the input grid does not activate firing_graph, if any set.
+
+        :return: Current instance of the class.
+        """
+
+        if l_patterns is not None:
+            ax_inputs = hstack([p.I for p in l_patterns]).A
+            ax_mask = self.mapping_feature_input.dot(ax_inputs.transpose().dot(self.mapping_feature_input).transpose())
+            l_excludes = [r.nonzero()[0] for r in (ax_mask != ax_inputs).transpose()]
+
+        for i in range(n):
+            # Sample feature
+            ax_feature_mask = np.random.binomial(1, self.p_sample, self.mapping_feature_input.shape[1]).astype(bool)
+
+            # Get input linked to sampled features
+            ax_input_mask = self.mapping_feature_input.dot(np.diag(ax_feature_mask)).sum(axis=1) > 0
+
+            # add inputes  to samples
+            if l_patterns is not None:
+                self.samples[i] = np.setdiff1d(ax_input_mask.nonzero()[0], l_excludes[i])
+            else:
+                self.samples[i] = ax_input_mask.nonzero()[0]
+
+        print("[Sampler]: {} sampling of features.".format(n))
+
         return self
