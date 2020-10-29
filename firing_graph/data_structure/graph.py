@@ -30,7 +30,7 @@ class FiringGraph(object):
         self.graph_id = graph_id
         self.is_drained = is_drained
 
-        # architecture core params
+        # architecture firing_graph params
         self.depth = depth
         self.levels = ax_levels
 
@@ -175,7 +175,7 @@ class FiringGraph(object):
         """
         return FiringGraph(**d_graph)
 
-    def propagate(self, sax_i, max_batch=20000, dropout_rate=0.):
+    def propagate(self, sax_i, max_batch=50000, return_activations=True):
         """
 
         :param sax_i:
@@ -188,10 +188,10 @@ class FiringGraph(object):
             for i, j in [(max_batch * i, max_batch * (i + 1)) for i in range(n)]:
                 if i >= sax_i.shape[0]:
                     continue
-                l_outputs.append(self.propagate(sax_i[i:j, :], dropout_rate=dropout_rate))
+                l_outputs.append(self.propagate(sax_i[i:j, :], return_activations=return_activations))
             return vstack(l_outputs)
 
-        # Init core signal to all zeros
+        # Init firing_graph signal to all zeros
         sax_c = csc_matrix((sax_i.shape[0], self.C.shape[0]))
 
         for i in range(self.depth - 1):
@@ -204,11 +204,11 @@ class FiringGraph(object):
                 sax_i = csc_matrix(sax_i.shape)
 
         sax_o = fto(self.O, sax_c)
-        if dropout_rate > 0:
-            dropout_func = vectorize(lambda x: binomial(int(x), 1 - dropout_rate) if x > 0 else 0)
-            sax_o.data = dropout_func(sax_o.data)
 
-        return sax_o > 0
+        if return_activations:
+            return sax_o > 0
+        else:
+            return sax_o
 
     def propagate_value(self, sax_i, ax_value, max_batch=20000):
         """
@@ -216,7 +216,6 @@ class FiringGraph(object):
         :param sax_i:
         :return:
         """
-
         # If input size too large, then split work
         if sax_i.shape[0] > max_batch:
             l_outputs, n = [], int(sax_i.shape[0] / max_batch) + 1
@@ -226,9 +225,8 @@ class FiringGraph(object):
                 l_outputs.append(self.propagate_value(sax_i[i:j, :], ax_value))
             return vstack(l_outputs)
 
-        # Init core signal to all zeros
+        # Init firing_graph signal to all zeros
         sax_c = csc_matrix((sax_i.shape[0], self.C.shape[0]))
-
         for i in range(self.depth - 1):
 
             # Core transmit

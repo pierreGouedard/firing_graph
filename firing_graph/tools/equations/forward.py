@@ -10,9 +10,9 @@ def fti(server, firing_graph, batch_size):
     Initialise the forward signal of input vertice with fresh input
 
     :param server:
-    :type server: core.imputers.ArrayServer
+    :type server: firing_graph.imputers.ArrayServer
     :param firing_graph:
-    :type firing_graph: deyep.core.data_structure.graph.FiringGraph
+    :type firing_graph: deyep.firing_graph.data_structure.graph.FiringGraph
     :param: batch_size: size of forward batch
     :type: int
     :return: Forward signal of input vertice
@@ -25,17 +25,17 @@ def fti(server, firing_graph, batch_size):
 
 def ftc(sax_C, sax_I, sax_c, sax_i):
     """
-    Transmit signal through core vertices of firing graph
+    Transmit signal through firing_graph vertices of firing graph
 
-    :param sax_C: Matrix of direct connection of core vertices
+    :param sax_C: Matrix of direct connection of firing_graph vertices
     :type sax_C: scipy.sparse.spmatrix
-    :param sax_I: Matrices of direct connection of input vertices toward core vertices
+    :param sax_I: Matrices of direct connection of input vertices toward firing_graph vertices
     :type sax_I: scipy.sparse.spmatrix
-    :param sax_c: Forward signal of core vertices
+    :param sax_c: Forward signal of firing_graph vertices
     :type sax_c: scipy.sparse.spmatrix
     :param sax_i: Forward signal of input vertices
     :type sax_i: scipy.sparse.spmatrix
-    :return: scipy.sparse forward signal of core vertices
+    :return: scipy.sparse forward signal of firing_graph vertices
     :rtype: scipy.sparse.spmatrix
     """
     sax_c = sax_i.dot(sax_I) + sax_c.dot(sax_C)
@@ -45,11 +45,11 @@ def ftc(sax_C, sax_I, sax_c, sax_i):
 
 def fto(sax_O, sax_c):
     """
-    Transmit signal of core vertices to output vertices of firing graph
+    Transmit signal of firing_graph vertices to output vertices of firing graph
 
-    :param sax_O: Matrix of direct connection of core vertices toward output vertices
+    :param sax_O: Matrix of direct connection of firing_graph vertices toward output vertices
     :type sax_O: scipy.sparse.spmatrix
-    :param sax_c: Forward signal of core vertices
+    :param sax_c: Forward signal of firing_graph vertices
     :type sax_c: scipy.sparse.spmatrix
     :return: Output forward signal
     :rtype: scipy.sparse.spmatrix
@@ -81,11 +81,11 @@ def fpi(sax_i, sax_im):
 
 def fpc(sax_c, sax_cm, ax_levels):
     """
-    Compute new core forward signal  and store into core forward memory signal if it is not None
+    Compute new firing_graph forward signal  and store into firing_graph forward memory signal if it is not None
 
     :param sax_c: received forward signal
     :type sax_c: scipy.sparse.spmatrix
-    :param sax_cm: forward memory of core vertice or None
+    :param sax_cm: forward memory of firing_graph vertice or None
     :type sax_cm: scipy.sparse.spmatrix or None
     :param ax_levels: levels of forward vertex
     :type ax_levels: numpy.array
@@ -111,7 +111,7 @@ def fpo(sax_o, server, batch_size, ax_p, ax_q):
     :param sax_o: received forward signals
     :type sax_o: scipy.sparse.spmatrix
     :param server:
-    :type server: core.tools.helpers.server.ArrayServer
+    :type server: firing_graph.tools.helpers.server.ArrayServer
     :param batch_size:
     :type batch_size: int
     :param ax_p:

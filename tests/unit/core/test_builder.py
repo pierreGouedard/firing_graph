@@ -4,8 +4,8 @@ import numpy as np
 from scipy.sparse import csc_matrix
 
 # Local import
-from core.data_structure.utils import mat_from_tuples
-from core.data_structure.graph import FiringGraph
+from firing_graph.data_structure.utils import mat_from_tuples
+from firing_graph.data_structure.graph import FiringGraph
 
 
 class TestBuilder(unittest.TestCase):
@@ -43,7 +43,7 @@ class TestBuilder(unittest.TestCase):
     def test_building_graph(self):
         """
         Test basic graph building
-        python -m unittest tests.unit.core.test_builder.TestBuilder.test_building_graph
+        python -m unittest tests.unit.firing_graph.test_builder.TestBuilder.test_building_graph
 
         """
 
@@ -83,7 +83,7 @@ class TestBuilder(unittest.TestCase):
     def test_propagate(self):
         """
         Test basic graph building
-        python -m unittest tests.unit.core.test_builder.TestBuilder.test_propagate
+        python -m unittest tests.unit.firing_graph.test_builder.TestBuilder.test_propagate
 
         """
 

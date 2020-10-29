@@ -6,10 +6,10 @@ from scipy.sparse import diags, lil_matrix, csc_matrix, csr_matrix, hstack, vsta
 def mat_from_tuples(ni, no, nc, l_edges, weights):
     """
     Take list of tuple (str x, str y), dimension of network and weights and set matrices of network
-    :param l_edges: [(str x, str y)] contains name of vertex class in ('input', 'core', 'output') and their index
+    :param l_edges: [(str x, str y)] contains name of vertex class in ('input', 'firing_graph', 'output') and their index
     :param ni: int number of input vertex
-    :param nc: int number of core vertex
-    :param no: int number of core vertex
+    :param nc: int number of firing_graph vertex
+    :param no: int number of firing_graph vertex
     :param l_weights: either not set of int weights of every edges or list of weight (size equal to size of l_edges
     :return: 3 sparse matrices of the network
     """
@@ -33,8 +33,8 @@ def mat_from_tuples(ni, no, nc, l_edges, weights):
 
             sax_in[int(_n.split('_')[1]), int(n_.split('_')[1])] = v
 
-        elif 'core' in _n:
-            if 'core' in n_:
+        elif 'firing_graph' in _n:
+            if 'firing_graph' in n_:
                 if isinstance(weights, int):
                     v = weights
                 elif isinstance(weights, list):
@@ -87,9 +87,9 @@ def gather_matrices(ax_in, ax_core, ax_out):
     from numpy array of direct link between different king of vertices of firing graph return the global matrices of
     direct link (no distinction of vertex type)
 
-    :param ax_in: numpy.array of direct link from input vertices toward core vertices
+    :param ax_in: numpy.array of direct link from input vertices toward firing_graph vertices
     :param ax_core: numpy.array of direct link of vertices
-    :param ax_out: numpy.array of direct link from core vertices toward output vertices
+    :param ax_out: numpy.array of direct link from firing_graph vertices toward output vertices
     :return: numpy.array of direct link of vertices of firing graph
     """
 
@@ -195,25 +195,25 @@ def reduce_matrices(d_matrices, l_indices):
     }
 
 
-def augment_matrices(d_matrices_a, d_matrices_b, write_mode=True):
+def augment_matrices(d_matrices_l, d_matrices_r, write_mode=True):
 
     # make sure dimension match
-    assert d_matrices_a['Iw'].shape[0] == d_matrices_b['Iw'].shape[0], "shape of inputs matrices doesn't match"
-    assert d_matrices_a['Ow'].shape[1] == d_matrices_b['Ow'].shape[1], "shape of outputs matrices doesn't match"
+    assert d_matrices_l['Iw'].shape[0] == d_matrices_r['Iw'].shape[0], "shape of inputs matrices doesn't match"
+    assert d_matrices_l['Ow'].shape[1] == d_matrices_r['Ow'].shape[1], "shape of outputs matrices doesn't match"
 
     # Merge Core matrices
-    sax_Cw_upper = hstack([d_matrices_a['Cw'], csc_matrix((d_matrices_a['Cw'].shape[0], d_matrices_b['Cw'].shape[1]))])
-    sax_Cw_lower = hstack([csc_matrix((d_matrices_b['Cw'].shape[0], d_matrices_a['Cw'].shape[0])), d_matrices_b['Cw']])
+    sax_Cw_upper = hstack([d_matrices_l['Cw'], csc_matrix((d_matrices_l['Cw'].shape[0], d_matrices_r['Cw'].shape[1]))])
+    sax_Cw_lower = hstack([csc_matrix((d_matrices_r['Cw'].shape[0], d_matrices_l['Cw'].shape[0])), d_matrices_r['Cw']])
 
-    sax_Cm_upper = hstack([d_matrices_a['Cm'], csc_matrix((d_matrices_a['Cm'].shape[0], d_matrices_b['Cm'].shape[1]))])
-    sax_Cm_lower = hstack([csc_matrix((d_matrices_b['Cm'].shape[0], d_matrices_a['Cm'].shape[0])), d_matrices_b['Cm']])
+    sax_Cm_upper = hstack([d_matrices_l['Cm'], csc_matrix((d_matrices_l['Cm'].shape[0], d_matrices_r['Cm'].shape[1]))])
+    sax_Cm_lower = hstack([csc_matrix((d_matrices_r['Cm'].shape[0], d_matrices_l['Cm'].shape[0])), d_matrices_r['Cm']])
 
     d_matrices = {
-        'Im': hstack([d_matrices_a['Im'], d_matrices_b['Im']]),
-        'Om': vstack([d_matrices_a['Om'], d_matrices_b['Om']]),
+        'Im': hstack([d_matrices_l['Im'], d_matrices_r['Im']]),
+        'Om': vstack([d_matrices_l['Om'], d_matrices_r['Om']]),
         'Cm': vstack([sax_Cm_upper, sax_Cm_lower]),
-        'Iw': hstack([d_matrices_a['Iw'], d_matrices_b['Iw']]),
-        'Ow': vstack([d_matrices_a['Ow'], d_matrices_b['Ow']]),
+        'Iw': hstack([d_matrices_l['Iw'], d_matrices_r['Iw']]),
+        'Ow': vstack([d_matrices_l['Ow'], d_matrices_r['Ow']]),
         'Cw': vstack([sax_Cw_upper, sax_Cw_lower]),
     }
 
@@ -228,7 +228,7 @@ def add_core_vertices(d_matrices, n_core, offset, write_mode=True):
     # Get I/O dimensions
     n_inputs, n_outputs = d_matrices['Iw'].shape[0], d_matrices['Ow'].shape[1]
 
-    # Update core matrices
+    # Update firing_graph matrices
     sax_Cw_upper= hstack([d_matrices['Cw'][:offset, :offset], csc_matrix((offset, n_core))])
     sax_Cm_upper = hstack([d_matrices['Cm'][:offset, :offset], csc_matrix((offset, n_core))])
 

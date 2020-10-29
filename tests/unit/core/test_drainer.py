@@ -4,10 +4,10 @@ from scipy.sparse import csc_matrix, vstack, lil_matrix
 import numpy as np
 
 # Local import
-from core.data_structure.utils import gather_matrices, create_empty_matrices
-from core.tools.helpers.servers import ArrayServer
-from core.solver.drainer import FiringGraphDrainer
-from core.data_structure.graph import FiringGraph
+from firing_graph.data_structure.utils import gather_matrices, create_empty_matrices
+from firing_graph.tools.helpers.servers import ArrayServer
+from firing_graph.solver.drainer import FiringGraphDrainer
+from firing_graph.data_structure.graph import FiringGraph
 from utils.interactive_plots import plot_graph
 from utils.patterns import AndPattern2 as ap2, AndPattern3 as ap3
 
@@ -47,7 +47,7 @@ class TestDrainer(unittest.TestCase):
     def test_time_mask(self):
         """
         Test the well functioning of mask on backward updates
-        python -m unittest tests.unit.core.test_drainer.TestDrainer.test_time_mask
+        python -m unittest tests.unit.firing_graph.test_drainer.TestDrainer.test_time_mask
 
         """
 
@@ -73,7 +73,7 @@ class TestDrainer(unittest.TestCase):
     def test_andpattern(self):
         """
         Test And Pattern of depth 3
-        python -m unittest tests.unit.core.test_drainer.TestDrainer.test_andpattern
+        python -m unittest tests.unit.firing_graph.test_drainer.TestDrainer.test_andpattern
 
         """
         # Create I/O and save it into tmpdir files
@@ -120,7 +120,7 @@ class TestDrainer(unittest.TestCase):
     def test_batch_size(self):
         """
         Test batch size coherence (depth 3)
-        python -m unittest tests.unit.core.test_drainer.TestDrainer.test_batch_size
+        python -m unittest tests.unit.firing_graph.test_drainer.TestDrainer.test_batch_size
 
         """
         # Create I/O and save it into tmpdir files
@@ -160,7 +160,7 @@ class TestDrainer(unittest.TestCase):
     def test_multi_output(self):
         """
         Test setting different p and r for different
-        python -m unittest tests.unit.core.test_drainer.TestDrainer.test_multi_output
+        python -m unittest tests.unit.firing_graph.test_drainer.TestDrainer.test_multi_output
 
         """
         # Create I/O and save it into tmpdir files

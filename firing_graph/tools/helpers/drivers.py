@@ -25,7 +25,7 @@ class Driver(object):
 
     def TempFile(self, prefix='tmp', suffix='', dir=None, destination=None, create=False):
         """
-        See data_pm.core.drivers.base_driver.TempFile
+        See data_pm.firing_graph.drivers.base_driver.TempFile
 
         :return: TempFile
         """
@@ -33,7 +33,7 @@ class Driver(object):
 
     def TempDir(self, prefix='tmp', suffix='', dir=None, destination=None, create=False):
         """
-        See data_pm.core.drivers.base_driver.TempDir
+        See data_pm.firing_graph.drivers.base_driver.TempDir
 
         :return: TempFile
         """

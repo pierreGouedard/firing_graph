@@ -1,7 +1,9 @@
 # Global imports
 import pickle
-from scipy.sparse import csr_matrix, vstack
-from numpy import int8
+from scipy.sparse import vstack, csc_matrix
+from numpy import int8, uint8, vectorize
+from numpy.random import binomial
+
 # Local imports
 
 
@@ -50,7 +52,7 @@ class FileServer(object):
 
 class ArrayServer(object):
     def __init__(self, sax_forward, sax_backward, dtype_forward=int, dtype_backward=int, pattern_forward=None,
-                 pattern_backward=None, sax_mask=None, dropout_mask=0):
+                 pattern_backward=None, sax_mask=None, dropout_rate_mask=0):
 
         # Set sparse signals
         self.n_label = sax_backward.shape[1]
@@ -67,13 +69,20 @@ class ArrayServer(object):
 
         # Set preprocessing patterns
         self.pattern_forward, self.pattern_backward = pattern_forward, pattern_backward
-        self.dropout_mask = dropout_mask
+        self.dropout_rate_mask = dropout_rate_mask
 
         # Define streaming features
         self.step_forward, self.step_backward = 0, 0
 
     def update_mask(self, pattern_mask):
-        self.__sax_mask = pattern_mask.propagate(self.__sax_forward, dropout_rate=self.dropout_mask)
+        if pattern_mask is None:
+            return
+
+        sax_mask = pattern_mask.propagate(self.__sax_forward, return_activations=False)
+        if self.__sax_mask is not None:
+            self.__sax_mask += sax_mask.astype(uint8)
+        else:
+            self.__sax_mask = sax_mask.astype(uint8)
 
     def stream_features(self):
         self.step_forward, self.step_backward = 0, 0
@@ -129,10 +138,14 @@ class ArrayServer(object):
 
         # Get mask data
         if self.__sax_mask is not None:
-            sax_mask = vstack([self.__sax_mask[start:end, :].tocsr() for (start, end) in l_positions]).astype(int8)
+            sax_mask = vstack([self.__sax_mask[start:end, :].tocsr() for (start, end) in l_positions])
+            if self.dropout_rate_mask > 0:
+                dropout_func = vectorize(lambda x: binomial(int(x), 1 - self.dropout_rate_mask) > 0 if x > 0 else 0)
+                sax_mask.data = dropout_func(sax_mask.data)
+                sax_mask.eliminate_zeros()
 
             if self.pattern_backward is not None:
-                sax_mask = self.pattern_backward.propagate(sax_mask)
+                sax_mask = self.pattern_backward.propagate(sax_mask.astype(self.dtype_forward))
 
             self.sax_mask_forward = sax_mask.astype(self.dtype_backward)
 

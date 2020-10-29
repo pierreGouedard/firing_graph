@@ -170,10 +170,10 @@ class FiringGraphDrainer(object):
 
     def backward_processing(self):
 
-        # Backward core processing: decay feedback by batch size
+        # Backward firing_graph processing: decay feedback by batch size
         self.sax_ob = bpo(self.sax_ob, get_mem_size(self.bs, self.firing_graph.depth), self.bs)
 
-        # Backward core processing: decay backward signal by 2 * batch size
+        # Backward firing_graph processing: decay backward signal by 2 * batch size
         self.sax_cb = bpc(self.sax_cb, self.bs)
 
 
