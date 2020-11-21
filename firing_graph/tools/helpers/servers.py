@@ -1,7 +1,7 @@
 # Global imports
 import pickle
 from scipy.sparse import vstack, csc_matrix
-from numpy import int8, uint8, vectorize
+from numpy import int8, uint8, uint16, vectorize
 from numpy.random import binomial
 
 # Local imports
@@ -54,18 +54,20 @@ class ArrayServer(object):
     def __init__(self, sax_forward, sax_backward, dtype_forward=int, dtype_backward=int, pattern_forward=None,
                  pattern_backward=None, sax_mask=None, dropout_rate_mask=0):
 
-        # Set sparse signals
+        # Set meta
         self.n_label = sax_backward.shape[1]
+        self.n_inputs = sax_forward.shape[1]
+
+        # Set sparse signals
         self.__sax_forward = sax_forward.tocsr()
         self.__sax_backward = sax_backward
-        self.__sax_mask = sax_mask
+        self.sax_mask = sax_mask
         self.dtype_forward = dtype_forward
         self.dtype_backward = dtype_backward
 
         # Initialize data
         self.sax_data_forward = None
         self.sax_data_backward = None
-        self.sax_mask_forward = None
 
         # Set preprocessing patterns
         self.pattern_forward, self.pattern_backward = pattern_forward, pattern_backward
@@ -74,15 +76,22 @@ class ArrayServer(object):
         # Define streaming features
         self.step_forward, self.step_backward = 0, 0
 
-    def update_mask(self, pattern_mask):
+
+    def update_mask(self, pattern_mask, ax_values=None):
         if pattern_mask is None:
             return
 
-        sax_mask = pattern_mask.propagate(self.__sax_forward, return_activations=False)
-        if self.__sax_mask is not None:
-            self.__sax_mask += sax_mask.astype(uint8)
+        if ax_values is None:
+            return pattern_mask.propagate(self.__sax_forward, return_activations=False)
         else:
-            self.__sax_mask = sax_mask.astype(uint8)
+            return pattern_mask.propagate_value(self.__sax_forward, ax_values)
+
+    def classification_mask(self, sax_backward_hat):
+        sax_mask = sax_backward_hat.multiply(self.__sax_backward).sum(axis=1)
+        return sax_mask
+
+    def apply_mask(self, sax_data, type, l_positions):
+        raise NotImplementedError
 
     def stream_features(self):
         self.step_forward, self.step_backward = 0, 0
@@ -109,45 +118,36 @@ class ArrayServer(object):
 
     def next_forward(self, n=1, update_step=True):
 
-        # Compute indices
+        # get data
         l_positions = self.recursive_positions(self.step_forward, n, self.__sax_forward.shape[0])
         sax_data = vstack([self.__sax_forward[start:end, :].tocsr() for (start, end) in l_positions])
+        sax_data = self.apply_mask(sax_data, 'forward', l_positions)
+
+        # Propagate in pattern if any
+        if self.pattern_forward is not None:
+            sax_data = self.pattern_forward.propagate(sax_data)
+
+        # Set data type
+        self.sax_data_forward = sax_data.astype(self.dtype_forward).tocsr()
 
         # Compute new step of forward
         if update_step:
             self.step_forward = (self.step_forward + n) % self.__sax_forward.shape[0]
 
-        # Get process forward data
-        if self.pattern_forward is not None:
-            sax_data = self.pattern_forward.propagate(sax_data)
-
-        self.sax_data_forward = sax_data.astype(self.dtype_forward).tocsr()
-
         return self
 
     def next_backward(self, n=1, update_step=True):
-        # Compute indices
+        # Get data
         l_positions = self.recursive_positions(self.step_backward, n, self.__sax_backward.shape[0])
         sax_data = vstack([self.__sax_backward[start:end, :].tocsr() for (start, end) in l_positions]).astype(int8)
+        sax_data = self.apply_mask(sax_data, 'backward', l_positions)
 
-        # Get process backward data
+        # Propagate in pattern if any
         if self.pattern_backward is not None:
             sax_data = self.pattern_backward.propagate(sax_data)
 
-        self.sax_data_backward = sax_data.astype(self.dtype_backward)
-
-        # Get mask data
-        if self.__sax_mask is not None:
-            sax_mask = vstack([self.__sax_mask[start:end, :].tocsr() for (start, end) in l_positions])
-            if self.dropout_rate_mask > 0:
-                dropout_func = vectorize(lambda x: binomial(int(x), 1 - self.dropout_rate_mask) > 0 if x > 0 else 0)
-                sax_mask.data = dropout_func(sax_mask.data)
-                sax_mask.eliminate_zeros()
-
-            if self.pattern_backward is not None:
-                sax_mask = self.pattern_backward.propagate(sax_mask.astype(self.dtype_forward))
-
-            self.sax_mask_forward = sax_mask.astype(self.dtype_backward)
+        # Set data type
+        self.sax_data_backward = sax_data.astype(self.dtype_backward).tocsc()
 
         # Compute new step of backward
         if update_step:

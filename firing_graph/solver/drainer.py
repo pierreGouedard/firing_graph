@@ -9,10 +9,10 @@ from ..tools.equations.graph import buc, buo, bui
 
 
 class FiringGraphDrainer(object):
-    def __init__(self, firing_graph, server, batch_size, p=None, r=None, t=None, verbose=0):
+    def __init__(self, firing_graph, server, batch_size, penalties=None, rewards=None, t=-1, verbose=0):
 
         # Core params
-        self.ax_p, self.ax_r = p, r
+        self.ax_p, self.ax_r = penalties, rewards
         self.t = t
         self.bs = batch_size
         self.firing_graph = firing_graph

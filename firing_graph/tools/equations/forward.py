@@ -127,13 +127,14 @@ def fpo(sax_o, server, batch_size, ax_p, ax_q):
     sax_o = (sax_o > 0).astype(server.dtype_backward)
 
     # update output with mask if any
-    if server.sax_mask_forward is not None:
-        sax_o += server.sax_mask_forward.multiply(sax_o)
-        sax_o.data %= 2
-        sax_o.eliminate_zeros()
+    # if server.sax_mask_forward is not None:
+    #     # Why not sax_o = (sax_o - server.sax_mask_forward) > 0
+    #     sax_o += server.sax_mask_forward.multiply(sax_o)
+    #     sax_o.data %= 2
+    #     sax_o.eliminate_zeros()
 
     # Compute feedback signal
-    sax_ob = sax_got.tocsc().multiply(sax_o).dot(diags(ax_p + ax_q))
+    sax_ob = sax_got.multiply(sax_o).dot(diags(ax_p + ax_q))
     sax_ob -= sax_o.dot(diags(ax_p))
 
     return sax_ob.transpose()

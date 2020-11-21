@@ -210,7 +210,7 @@ class FiringGraph(object):
         else:
             return sax_o
 
-    def propagate_value(self, sax_i, ax_value, max_batch=20000):
+    def propagate_value(self, sax_i, ax_value, max_batch=10000, normalize=True):
         """
 
         :param sax_i:
@@ -237,9 +237,11 @@ class FiringGraph(object):
                 sax_i = csc_matrix(sax_i.shape)
 
         # Propagate value
-        sax_o_count = fto(self.O, sax_c)
         sax_o_value = fto(self.O, sax_c.dot(diags(ax_value, format='csc')))
-        sax_o_value[sax_o_value > 0] /= sax_o_count[sax_o_value > 0]
+
+        if normalize:
+            sax_o_count = fto(self.O, sax_c)
+            sax_o_value[sax_o_value != 0] /= sax_o_count[sax_o_value != 0]
 
         return sax_o_value
 
