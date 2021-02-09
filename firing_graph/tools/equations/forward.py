@@ -19,11 +19,12 @@ def fti(server, firing_graph, batch_size):
     :rtype: scipy.sparse.spmatrix
     """
     sax_i = server.next_forward(n=batch_size).sax_data_forward
+    sax_i_mask = server.sax_mask_forward
 
-    return sax_i
+    return sax_i, sax_i_mask
 
 
-def ftc(sax_C, sax_I, sax_c, sax_i):
+def ftc(sax_C, sax_I, sax_I_mask, sax_c, sax_i, sax_i_mask=None):
     """
     Transmit signal through firing_graph vertices of firing graph
 
@@ -38,7 +39,14 @@ def ftc(sax_C, sax_I, sax_c, sax_i):
     :return: scipy.sparse forward signal of firing_graph vertices
     :rtype: scipy.sparse.spmatrix
     """
-    sax_c = sax_i.dot(sax_I) + sax_c.dot(sax_C)
+    # Transmit input
+    sax_c_ = sax_i.dot(sax_I)
+
+    # update core with mask if any
+    if sax_I_mask is not None and sax_i_mask is not None:
+        sax_c_ -= sax_i_mask.dot(sax_I_mask).multiply(sax_c_)
+
+    sax_c = sax_c_.astype(sax_c.dtype) + sax_c.dot(sax_C)
 
     return sax_c
 
@@ -125,13 +133,6 @@ def fpo(sax_o, server, batch_size, ax_p, ax_q):
     # Get got signal
     sax_got = server.next_backward(n=batch_size).sax_data_backward
     sax_o = (sax_o > 0).astype(server.dtype_backward)
-
-    # update output with mask if any
-    # if server.sax_mask_forward is not None:
-    #     # Why not sax_o = (sax_o - server.sax_mask_forward) > 0
-    #     sax_o += server.sax_mask_forward.multiply(sax_o)
-    #     sax_o.data %= 2
-    #     sax_o.eliminate_zeros()
 
     # Compute feedback signal
     sax_ob = sax_got.multiply(sax_o).dot(diags(ax_p + ax_q))

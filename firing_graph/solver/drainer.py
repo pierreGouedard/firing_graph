@@ -9,11 +9,10 @@ from ..tools.equations.graph import buc, buo, bui
 
 
 class FiringGraphDrainer(object):
-    def __init__(self, firing_graph, server, batch_size, penalties=None, rewards=None, t=-1, verbose=0):
+    def __init__(self, firing_graph, server, batch_size, penalties=None, rewards=None, verbose=0):
 
         # Core params
         self.ax_p, self.ax_r = penalties, rewards
-        self.t = t
         self.bs = batch_size
         self.firing_graph = firing_graph
         self.verbose = verbose
@@ -52,7 +51,7 @@ class FiringGraphDrainer(object):
     def reset_backward(self):
         self.sax_cb, self.sax_ob = init_backward_signal(self.firing_graph, self.bs, self.server.dtype_backward)
 
-    def drain_all(self, n_max=10000, adapt_bs=False):
+    def drain_all(self, n_max=10000):
 
         stop, n = False, 0
         while not stop:
@@ -67,11 +66,6 @@ class FiringGraphDrainer(object):
             n += self.bs
             if n >= n_max:
                 stop = True
-
-            # Adapt batch size if specified
-            if adapt_bs and not stop and self.t > 0:
-                self.adapt_batch_size(self.bs)
-                self.reset_all()
 
         print("[Drainer]: {} samples has been propagated through firing graph".format(n))
 
@@ -123,15 +117,17 @@ class FiringGraphDrainer(object):
     def forward_transmiting(self, load_input=True):
         # Get new input
         if load_input:
-            self.sax_i = fti(self.server, self.firing_graph, self.bs)
+            self.sax_i, sax_i_mask = fti(self.server, self.firing_graph, self.bs)
         else:
-            self.sax_i = csr_matrix((self.bs, self.firing_graph.I.shape[0]), dtype=self.sax_i.dtype)
+            self.sax_i, sax_i_mask = csr_matrix((self.bs, self.firing_graph.I.shape[0]), dtype=self.sax_i.dtype), None
 
         # Output transmit
         self.sax_o = fto(self.firing_graph.O, self.sax_c)
 
         # Core transmit
-        self.sax_c = ftc(self.firing_graph.C, self.firing_graph.I, self.sax_c, self.sax_i)
+        self.sax_c = ftc(
+            self.firing_graph.C, self.firing_graph.I, self.firing_graph.I_mask, self.sax_c, self.sax_i, sax_i_mask
+        )
 
     def forward_processing(self, load_output=True):
 
@@ -151,19 +147,19 @@ class FiringGraphDrainer(object):
         # Update Output matrix
         if self.firing_graph.Om.nnz > 0:
             sax_track = buo(self.sax_ob, self.sax_cm, self.firing_graph)
-            self.firing_graph.update_backward_firing('O', sax_track)
+            self.firing_graph.update_backward_count('O', sax_track)
 
         # Update Core matrix adjacency matrix and drainer mask
         if self.firing_graph.Cm.nnz > 0:
             sax_track = buc(self.sax_cb, self.sax_cm, self.firing_graph)
-            self.firing_graph.update_backward_firing('C', sax_track)
+            self.firing_graph.update_backward_count('C', sax_track)
 
         # Update Input matrix
         if self.firing_graph.Im.nnz > 0:
             sax_track = bui(self.sax_cb, self.sax_im, self.firing_graph)
-            self.firing_graph.update_backward_firing('I', sax_track)
+            self.firing_graph.update_backward_count('I', sax_track)
 
-        self.firing_graph.update_mask(self.t)
+        self.firing_graph.update_backward_mask()
 
         # Backward transmit
         self.sax_cb = btc(self.sax_ob, self.sax_cb, self.sax_cm, self.firing_graph.O, self.firing_graph.C)

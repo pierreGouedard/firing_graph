@@ -20,7 +20,7 @@ class FiringGraph(object):
 
     """
     def __init__(self, project, ax_levels, matrices, depth=2, graph_id=None, is_drained=False, partitions=None,
-                 precision=None, score=None, backward_firing=None):
+                 precision=None, score=None, backward_firing=None, I_mask=None):
 
         if graph_id is None:
             graph_id = ''.join([random.choice(string.ascii_letters) for _ in range(5)])
@@ -37,6 +37,9 @@ class FiringGraph(object):
         # force format and type of matrices
         utils.set_matrices_spec(matrices, write_mode=False)
         self.matrices = matrices
+        if I_mask is not None:
+            I_mask = I_mask.tocsc().astype(self.matrices['Iw'].dtype)
+        self.I_mask = I_mask
 
         # set additional (optional) util attribute
         self.partitions = partitions
@@ -91,7 +94,7 @@ class FiringGraph(object):
         self.backward_firing = utils.create_empty_backward_firing( self.I.shape[0], self.O.shape[1], self.C.shape[0])
         return self
 
-    def update_backward_firing(self, key, sax_M):
+    def update_backward_count(self, key, sax_M):
 
         assert key in ['I', 'C', 'O'], "Key should be in {}".format(['I', 'C', 'O'])
 
@@ -104,28 +107,15 @@ class FiringGraph(object):
         elif key == 'O':
             self.backward_firing['o'] += sax_M.astype(self.backward_firing['o'].dtype)
 
-    def update_mask(self, t):
+    def update_backward_mask(self):
         if self.matrices['Im'].nnz > 0:
             self.matrices['Im'] = self.matrices['Im'].multiply(self.I)
-            if t > 0:
-                self.matrices['Im'] = self.clip_firing(self.matrices['Im'].tolil(), self.backward_firing['i'], t)
 
         if self.matrices['Cm'].nnz > 0:
             self.matrices['Cm'] = self.matrices['Cm'].multiply(self.C)
-            if t > 0:
-                self.matrices['Cm'] = self.clip_firing(self.matrices['Cm'], self.backward_firing['c'], t)
 
         if self.matrices['Om'].nnz > 0:
             self.matrices['Om'] = self.matrices['Om'].multiply(self.O)
-            if t > 0:
-                self.matrices['Om'] = self.clip_firing(self.matrices['Om'], self.backward_firing['o'], t)
-
-    @staticmethod
-    def clip_firing(sax_mask, sax_bf, t):
-        for i, j in zip(*sax_mask.nonzero()):
-            if sax_bf[i, j] >= t:
-                sax_mask[i, j] = False
-        return sax_mask.tocsc()
 
     @staticmethod
     def load_pickle(path):
@@ -181,7 +171,7 @@ class FiringGraph(object):
         :param sax_i:
         :return:
         """
-
+        import time
         # If input size too large, then split work
         if sax_i.shape[0] > max_batch:
             l_outputs, n = [], int(sax_i.shape[0] / max_batch) + 1
@@ -193,16 +183,14 @@ class FiringGraph(object):
 
         # Init firing_graph signal to all zeros
         sax_c = csc_matrix((sax_i.shape[0], self.C.shape[0]))
-
         for i in range(self.depth - 1):
 
             # Core transmit
-            sax_c = ftc(self.C, self.I, sax_c, sax_i.astype(int))
+            sax_c = ftc(self.C, self.I, None, sax_c, sax_i.astype(int))
             sax_c = fpc(sax_c, None, self.levels)
 
             if i == 0:
                 sax_i = csc_matrix(sax_i.shape)
-
         sax_o = fto(self.O, sax_c)
 
         if return_activations:
@@ -210,7 +198,7 @@ class FiringGraph(object):
         else:
             return sax_o
 
-    def propagate_value(self, sax_i, ax_value, max_batch=10000, normalize=True):
+    def propagate_values(self, sax_i, ax_values, max_batch=10000, normalize=True):
         """
 
         :param sax_i:
@@ -222,7 +210,7 @@ class FiringGraph(object):
             for i, j in [(max_batch * i, max_batch * (i + 1)) for i in range(n)]:
                 if i >= sax_i.shape[0]:
                     continue
-                l_outputs.append(self.propagate_value(sax_i[i:j, :], ax_value))
+                l_outputs.append(self.propagate_values(sax_i[i:j, :], ax_values))
             return vstack(l_outputs)
 
         # Init firing_graph signal to all zeros
@@ -230,14 +218,14 @@ class FiringGraph(object):
         for i in range(self.depth - 1):
 
             # Core transmit
-            sax_c = ftc(self.C, self.I, sax_c, sax_i.astype(int))
+            sax_c = ftc(self.C, self.I, None, sax_c, sax_i.astype(int))
             sax_c = fpc(sax_c, None, self.levels)
 
             if i == 0:
                 sax_i = csc_matrix(sax_i.shape)
 
         # Propagate value
-        sax_o_value = fto(self.O, sax_c.dot(diags(ax_value, format='csc')))
+        sax_o_value = fto(self.O, sax_c.dot(diags(ax_values, format='csc')))
 
         if normalize:
             sax_o_count = fto(self.O, sax_c)
