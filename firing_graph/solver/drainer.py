@@ -21,16 +21,8 @@ class FiringGraphDrainer(object):
         self.server = server
 
         # Init signals
-        self.sax_i, self.sax_c, self.sax_o = init_forward_signal(self.firing_graph, self.bs)
-        self.sax_im, self.sax_cm = init_forward_memory(self.firing_graph, self.bs)
-        self.sax_cb, self.sax_ob = init_backward_signal(self.firing_graph, self.bs, p=max(self.ax_p), r=max(self.ax_r))
-
-        # set dtypes of server
-        self.server.dtype_forward = self.sax_i.dtype
-        self.server.dtype_backward = self.sax_cb.dtype
-
-        # Init iteration count
-        self.iter = 0
+        if firing_graph is not None:
+            self.reset_all()
 
     def reset_all(self, server=False):
 
@@ -40,9 +32,13 @@ class FiringGraphDrainer(object):
 
         if server:
             self.reset_server()
+            
+        self.server.dtype_forward = self.sax_i.dtype
+        self.server.dtype_backward = self.sax_cb.dtype
 
     def reset_server(self):
         self.server.stream_features()
+
 
     def reset_forward(self):
         self.sax_i, self.sax_c, self.sax_o = init_forward_signal(self.firing_graph, self.bs, self.server.dtype_forward)

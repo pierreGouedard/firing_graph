@@ -1,8 +1,9 @@
 # Global imports
 import pickle
 from scipy.sparse import vstack
-from numpy import int8, uint16, vectorize
+from numpy import int8, uint16, vectorize, arange, hstack, where
 from numpy.random import binomial
+from random import choice
 
 # Local imports
 
@@ -51,8 +52,8 @@ class FileServer(object):
 
 
 class ArrayServer(object):
-    def __init__(self, sax_forward, sax_backward, dtype_forward=int, dtype_backward=int, pattern_forward=None,
-                 pattern_backward=None, sax_mask=None, dropout_rate_mask=0, mask_method="count"):
+    def __init__(self, sax_forward, sax_backward, dtype_forward=int, dtype_backward=int, pattern_backward=None,
+                 dropout_rate_mask=0, mask_method="count"):
 
         # Set meta
         self.n_label = sax_backward.shape[1]
@@ -66,7 +67,8 @@ class ArrayServer(object):
 
         # Set mask parameters
         self.mask_method = mask_method
-        self.__sax_mask = sax_mask
+        self.ax_param_mask = None
+        self.__ax_mask = None
 
         # Initialize data
         self.sax_data_forward = None
@@ -74,7 +76,7 @@ class ArrayServer(object):
         self.sax_mask_forward = None
 
         # Set preprocessing patterns
-        self.pattern_forward, self.pattern_backward = pattern_forward, pattern_backward
+        self.pattern_backward = pattern_backward
         self.dropout_rate_mask = dropout_rate_mask
 
         # Define streaming features
@@ -88,37 +90,26 @@ class ArrayServer(object):
 
         return sax_res
 
-    def update_mask(self, sax_mask):
-        if self.__sax_mask is not None:
-            if self.mask_method == 'count':
-                self.__sax_mask += sax_mask
-
-            elif self.mask_method == 'proba':
-                self.__sax_mask[self.__sax_mask < sax_mask] = sax_mask[self.__sax_mask < sax_mask]
+    def get_random_samples(self, n):
+        if self.__ax_mask is not None:
+            l_pool = list(self.__ax_mask.nonzero()[0])
 
         else:
-                self.__sax_mask = sax_mask
+            l_pool = list(set(range(self.__sax_forward.shape[0])))
 
-    def apply_mask_method(self, sax_mask):
+        return self.__sax_forward[[choice(l_pool) for _ in range(n)], :]
 
-        if self.mask_method == "count":
-            if self.dropout_rate_mask > 0:
-                dropout_func = vectorize(lambda x: binomial(int(x), 1 - self.dropout_rate_mask) > 0 if x > 0 else 0)
-                sax_mask.data = dropout_func(sax_mask.data)
-                sax_mask.eliminate_zeros()
-            else:
-                sax_mask = (sax_mask > 0)
+    def count_unmasked(self,):
+        if self.__ax_mask is None:
+            return self.__ax_mask.shape[0]
+        else:
+            return self.__ax_mask.sum()
 
-        elif self.mask_method == 'proba':
-            dropout_func = vectorize(lambda x: binomial(1, max(0, min(x, 1))) > 0)
-            sax_mask.data = dropout_func(sax_mask.data)
-            sax_mask.eliminate_zeros()
+    def update_mask(self):
+        self.__ax_mask = self.apply_mask_method(self.ax_param_mask.copy())
 
-        return sax_mask.astype(self.dtype_forward)
-
-    def classification_mask(self, sax_backward_hat):
-        sax_mask = sax_backward_hat.multiply(self.__sax_backward).sum(axis=1)
-        return sax_mask
+    def apply_mask_method(self, ax_mask):
+        pass
 
     def stream_features(self):
         self.step_forward, self.step_backward = 0, 0
@@ -132,57 +123,52 @@ class ArrayServer(object):
         step = max(self.step_forward, self.step_backward)
         self.step_forward, self.step_backward = step, step
 
-    @staticmethod
-    def recursive_positions(step, n, n_max):
+    def recursive_positions(self, step, n, n_max):
 
-        l_positions = [(step, min(step + n, n_max))]
-        residual = max(step + n - n_max, 0)
+        # Apply mask to data
+        if self.__ax_mask is not None:
+            ax_cum_mask = self.__ax_mask[step:].cumsum()
+            end = step + where(ax_cum_mask == min(n, ax_cum_mask.max()))[0].max()
+            ax_positions = arange(step, end + 1)[self.__ax_mask[step:end + 1]]
+
+        else:
+            ax_positions = arange(step, min(step + n, n_max))
+
+        residual = max(n - ax_positions.shape[0], 0)
 
         if residual > 0:
-            l_positions.extend(ArrayServer.recursive_positions(0, residual, n_max))
+            ax_positions = hstack([ax_positions, self.recursive_positions(0, residual, n_max)])
 
-        return l_positions
+        return ax_positions
 
-    def get_init_precision(self, sax_opt_mask=None):
-
+    def get_init_precision(self):
         sax_masked_backward = self.__sax_backward.astype(int)
-        if self.__sax_mask is not None:
-            sax_masked_backward -= (self.__sax_mask > 0).astype(int)
+        if self.__ax_mask is not None:
+            sax_masked_backward = sax_masked_backward[self.__ax_mask, :].astype(int)
 
-        if sax_opt_mask is not None:
-            sax_masked_backward -= (sax_opt_mask > 0).astype(int)
-
-        return (sax_masked_backward > 0).sum(axis=0).A[0] / self.__sax_backward.shape[0]
+        return (sax_masked_backward > 0).sum(axis=0).A[0] / sax_masked_backward.shape[0]
 
     def next_forward(self, n=1, update_step=True):
 
-        # get data
-        l_positions = self.recursive_positions(self.step_forward, n, self.__sax_forward.shape[0])
-        sax_data = vstack([self.__sax_forward[start:end, :].tocsr() for (start, end) in l_positions])
-
-        # Propagate in pattern if any
-        if self.pattern_forward is not None:
-            sax_data = self.pattern_forward.propagate(sax_data)
+        # get indices
+        ax_indices = self.recursive_positions(self.step_forward, n, self.__sax_forward.shape[0])
 
         # Set data type
-        self.sax_data_forward = sax_data.astype(self.dtype_forward).tocsr()
+        self.sax_data_forward = self.__sax_forward[ax_indices, :].astype(self.dtype_forward).tocsr()
 
-        # Get mask data
-        self.sax_mask_forward = None
-        if self.__sax_mask is not None:
-            sax_mask = vstack([self.__sax_mask[start:end, :].tocsr() for (start, end) in l_positions])
-            self.sax_mask_forward  = self.apply_mask_method(sax_mask)
+        # TODO: build Vertices mask from pattern_(mask_forward)
 
         # Compute new step of forward
         if update_step:
-            self.step_forward = (self.step_forward + n) % self.__sax_forward.shape[0]
+            self.step_forward = (ax_indices[-1] + 1) % self.__sax_forward.shape[0]
 
         return self
 
     def next_backward(self, n=1, update_step=True):
-        # Get data
-        l_positions = self.recursive_positions(self.step_backward, n, self.__sax_backward.shape[0])
-        sax_data = vstack([self.__sax_backward[start:end, :].tocsr() for (start, end) in l_positions]).astype(int8)
+
+        # get indices
+        ax_indices = self.recursive_positions(self.step_backward, n, self.__sax_forward.shape[0])
+        sax_data = self.__sax_backward[ax_indices, :]
 
         # Propagate in pattern if any
         if self.pattern_backward is not None:
@@ -193,7 +179,7 @@ class ArrayServer(object):
 
         # Compute new step of backward
         if update_step:
-            self.step_backward = (self.step_backward + n) % self.__sax_backward.shape[0]
+            self.step_backward = (ax_indices[-1] + 1) % self.__sax_forward.shape[0]
 
         return self
 
