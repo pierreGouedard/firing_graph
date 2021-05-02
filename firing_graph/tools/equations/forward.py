@@ -1,18 +1,16 @@
 # Global import
-from scipy.sparse import csc_matrix, csr_matrix, vstack, diags
+from scipy.sparse import csc_matrix, csr_matrix, vstack, diags, eye, hstack
 from numpy import newaxis
 
 # Local import
 
 
-def fti(server, firing_graph, batch_size):
+def fti(server, batch_size):
     """
     Initialise the forward signal of input vertice with fresh input
 
     :param server:
     :type server: firing_graph.imputers.ArrayServer
-    :param firing_graph:
-    :type firing_graph: deyep.firing_graph.data_structure.graph.FiringGraph
     :param: batch_size: size of forward batch
     :type: int
     :return: Forward signal of input vertice
@@ -24,7 +22,7 @@ def fti(server, firing_graph, batch_size):
     return sax_i, sax_i_mask
 
 
-def ftc(sax_C, sax_I, sax_I_mask, sax_c, sax_i, sax_i_mask=None):
+def ftc(sax_C, sax_I, sax_c, sax_i, fg_mask=None):
     """
     Transmit signal through firing_graph vertices of firing graph
 
@@ -42,9 +40,10 @@ def ftc(sax_C, sax_I, sax_I_mask, sax_c, sax_i, sax_i_mask=None):
     # Transmit input
     sax_c_ = sax_i.dot(sax_I)
 
-    # update core with mask if any
-    if sax_I_mask is not None and sax_i_mask is not None:
-        sax_c_ -= sax_i_mask.dot(sax_I_mask).multiply(sax_c_)
+    if fg_mask is not None:
+        sax_im = fg_mask.propagate(sax_i)
+        sax_pad = csc_matrix((sax_i.shape[0], sax_I.shape[1] - sax_im.shape[1]))
+        sax_c_ = sax_c_.multiply(hstack([sax_im, sax_pad]))
 
     sax_c = sax_c_.astype(sax_c.dtype) + sax_c.dot(sax_C)
 

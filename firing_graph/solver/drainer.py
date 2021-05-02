@@ -9,18 +9,23 @@ from ..tools.equations.graph import buc, buo, bui
 
 
 class FiringGraphDrainer(object):
-    def __init__(self, firing_graph, server, batch_size, penalties=None, rewards=None, verbose=0):
+    def __init__(self, firing_graph, server, batch_size, penalties=None, rewards=None, fg_mask=None, verbose=0):
 
         # Core params
         self.ax_p, self.ax_r = penalties, rewards
         self.bs = batch_size
         self.firing_graph = firing_graph
+        self.fg_mask = fg_mask
         self.verbose = verbose
 
         # stream feed forward and backward
         self.server = server
 
         # Init signals
+        self.sax_i, self.sax_c, self.sax_o = None, None, None
+        self.sax_im, self.sax_cm = None, None
+        self.sax_cb, self.sax_ob = None, None
+        self.iter = 0
         if firing_graph is not None:
             self.reset_all()
 
@@ -113,17 +118,15 @@ class FiringGraphDrainer(object):
     def forward_transmiting(self, load_input=True):
         # Get new input
         if load_input:
-            self.sax_i, sax_i_mask = fti(self.server, self.firing_graph, self.bs)
+            self.sax_i = fti(self.server, self.bs)
         else:
-            self.sax_i, sax_i_mask = csr_matrix((self.bs, self.firing_graph.I.shape[0]), dtype=self.sax_i.dtype), None
+            self.sax_i = csr_matrix((self.bs, self.firing_graph.I.shape[0]), dtype=self.sax_i.dtype)
 
         # Output transmit
         self.sax_o = fto(self.firing_graph.O, self.sax_c)
 
         # Core transmit
-        self.sax_c = ftc(
-            self.firing_graph.C, self.firing_graph.I, self.firing_graph.I_mask, self.sax_c, self.sax_i, sax_i_mask
-        )
+        self.sax_c = ftc(self.firing_graph.C, self.firing_graph.I, self.sax_c, self.sax_i, self.fg_mask)
 
     def forward_processing(self, load_output=True):
 

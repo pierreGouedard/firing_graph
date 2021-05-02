@@ -194,9 +194,9 @@ class FiringGraph(object):
         sax_o = fto(self.O, sax_c)
 
         if return_activations:
-            return sax_o > 0
+            return (sax_o > 0).tocsc()
         else:
-            return sax_o
+            return sax_o.tocsc()
 
     def propagate_values(self, sax_i, ax_values, max_batch=10000, normalize=True):
         """
@@ -231,7 +231,7 @@ class FiringGraph(object):
             sax_o_count = fto(self.O, sax_c)
             sax_o_value[sax_o_value != 0] /= sax_o_count[sax_o_value != 0]
 
-        return sax_o_value
+        return sax_o_value.tocsc()
 
     def save_as_pickle(self, path):
         d_graph = self.to_dict()

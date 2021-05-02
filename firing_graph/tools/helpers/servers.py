@@ -52,8 +52,8 @@ class FileServer(object):
 
 
 class ArrayServer(object):
-    def __init__(self, sax_forward, sax_backward, dtype_forward=int, dtype_backward=int, pattern_backward=None,
-                 dropout_rate_mask=0, mask_method="count"):
+    def __init__(self, sax_forward, sax_backward, dtype_forward=int, dtype_backward=int, pattern_forward=None,
+                 pattern_backward=None, dropout_rate_mask=0, mask_method="count"):
 
         # Set meta
         self.n_label = sax_backward.shape[1]
@@ -76,7 +76,7 @@ class ArrayServer(object):
         self.sax_mask_forward = None
 
         # Set preprocessing patterns
-        self.pattern_backward = pattern_backward
+        self.pattern_forward, self.pattern_backward = pattern_forward, pattern_backward
         self.dropout_rate_mask = dropout_rate_mask
 
         # Define streaming features
@@ -152,11 +152,14 @@ class ArrayServer(object):
 
         # get indices
         ax_indices = self.recursive_positions(self.step_forward, n, self.__sax_forward.shape[0])
+        sax_data = self.__sax_forward[ax_indices, :]
+
+        # Propagate in pattern if any
+        if self.pattern_forward is not None:
+            sax_data = self.pattern_forward.propagate(sax_data)
 
         # Set data type
-        self.sax_data_forward = self.__sax_forward[ax_indices, :].astype(self.dtype_forward).tocsr()
-
-        # TODO: build Vertices mask from pattern_(mask_forward)
+        self.sax_data_forward = sax_data.astype(self.dtype_forward).tocsr()
 
         # Compute new step of forward
         if update_step:
