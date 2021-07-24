@@ -73,7 +73,6 @@ class ArrayServer(object):
         # Initialize data
         self.sax_data_forward = None
         self.sax_data_backward = None
-        self.sax_mask_forward = None
 
         # Set preprocessing patterns
         self.pattern_forward, self.pattern_backward = pattern_forward, pattern_backward
@@ -97,7 +96,10 @@ class ArrayServer(object):
         else:
             l_pool = list(set(range(self.__sax_forward.shape[0])))
 
-        return self.__sax_forward[[choice(l_pool) for _ in range(n)], :]
+        return self.get_sub_forward([choice(l_pool) for _ in range(n)])
+
+    def get_sub_forward(self, indices):
+        return self.__sax_forward[indices, :]
 
     def count_unmasked(self,):
         if self.__ax_mask is None:
@@ -106,6 +108,7 @@ class ArrayServer(object):
             return self.__ax_mask.sum()
 
     def update_mask(self):
+        assert self.step_backward == self.step_forward, "Can't update mask if forward and backward not sync"
         self.__ax_mask = self.apply_mask_method(self.ax_param_mask.copy())
 
     def apply_mask_method(self, ax_mask):

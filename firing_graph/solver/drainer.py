@@ -44,6 +44,8 @@ class FiringGraphDrainer(object):
     def reset_server(self):
         self.server.stream_features()
 
+    def update_pr(self, penalties, rewards):
+        self.ax_p, self.ax_r = penalties, rewards
 
     def reset_forward(self):
         self.sax_i, self.sax_c, self.sax_o = init_forward_signal(self.firing_graph, self.bs, self.server.dtype_forward)

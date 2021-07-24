@@ -17,9 +17,8 @@ def fti(server, batch_size):
     :rtype: scipy.sparse.spmatrix
     """
     sax_i = server.next_forward(n=batch_size).sax_data_forward
-    sax_i_mask = server.sax_mask_forward
 
-    return sax_i, sax_i_mask
+    return sax_i
 
 
 def ftc(sax_C, sax_I, sax_c, sax_i, fg_mask=None):
