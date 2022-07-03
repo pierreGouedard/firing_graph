@@ -55,23 +55,9 @@ class FiringGraphDrainer(object):
         self.sax_cb, self.sax_ob = init_backward_signal(self.firing_graph, self.bs, self.server.dtype_backward)
 
     def drain_all(self, n_max=10000):
-
-        stop, n = False, 0
-        while not stop:
-            # Drain and reset signals
-            self.drain()
-            self.reset_all()
-
-            # Stop conditions
-            if self.firing_graph.Im.nnz == 0 and self.firing_graph.Cm.nnz == 0 and self.firing_graph.Om.nnz == 0:
-                stop = True
-
-            n += self.bs
-            if n >= n_max:
-                stop = True
-
-        print("[Drainer]: {} samples has been propagated through firing graph".format(n))
-
+        self.drain(n=n_max // self.bs + 1)
+        self.reset_all()
+        print("[Drainer]: {} samples has been propagated through firing graph".format(n_max))
         return self
 
     def drain(self, n=1):

@@ -20,7 +20,7 @@ class FiringGraph(object):
 
     """
     def __init__(self, project, ax_levels, matrices, depth=2, graph_id=None, is_drained=False, partitions=None,
-                 precision=None, score=None, backward_firing=None, I_mask=None):
+                 precision=None, score=None, backward_firing=None):
 
         if graph_id is None:
             graph_id = ''.join([random.choice(string.ascii_letters) for _ in range(5)])
@@ -37,9 +37,6 @@ class FiringGraph(object):
         # force format and type of matrices
         utils.set_matrices_spec(matrices, write_mode=False)
         self.matrices = matrices
-        if I_mask is not None:
-            I_mask = I_mask.tocsc().astype(self.matrices['Iw'].dtype)
-        self.I_mask = I_mask
 
         # set additional (optional) util attribute
         self.partitions = partitions
