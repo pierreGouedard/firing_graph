@@ -1,59 +1,16 @@
 # Global imports
 import pickle
-from scipy.sparse import vstack
-from numpy import int8, uint16, vectorize, arange, hstack, where
-from numpy.random import binomial
+from numpy import arange, hstack, where
 from random import choice
 
 # Local imports
 
 
-class FileServer(object):
-
-    def __init__(self, path_forward, path_backward, streamer, is_cyclic=True):
-
-        # Define core attribute of the file server
-        self.path_forward = path_forward
-        self.path_backward = path_backward
-        self.streamer = streamer
-        self.is_cyclic = is_cyclic
-
-        # Initialize stream to None
-        self.stream_forward, self.stream_backward = None, None
-
-    def stream_data(self):
-
-        # Stream I/O
-        self.stream_forward = self.streamer.create_stream(
-            self.path_forward, is_cyclic=self.is_cyclic, orient='row'
-        )
-
-        self.stream_backward = self.streamer.create_stream(
-            self.path_backward, is_cyclic=self.is_cyclic, orient='row'
-        )
-
-    def next_forward(self):
-        return self.stream_forward.next()
-
-    def next_backward(self):
-        return self.stream_backward.next()
-
-    def save_as_pickle(self, path):
-        with open(path, 'wb') as handle:
-            pickle.dump(self, handle)
-
-    @staticmethod
-    def load_pickle(path):
-
-        with open(path, 'rb') as handle:
-            server = pickle.load(handle)
-
-        return server
-
-
 class ArrayServer(object):
-    def __init__(self, sax_forward, sax_backward, dtype_forward=int, dtype_backward=int, pattern_forward=None,
-                 pattern_backward=None, dropout_rate_mask=0, mask_method="count"):
+    def __init__(
+            self, sax_forward, sax_backward, pattern_forward=None, pattern_backward=None, dropout_rate_mask=0,
+            mask_method="count"
+    ):
 
         # Set meta
         self.n_label = sax_backward.shape[1]
@@ -61,9 +18,7 @@ class ArrayServer(object):
 
         # Set sparse signals
         self.__sax_forward = sax_forward.tocsr()
-        self.__sax_backward = sax_backward
-        self.dtype_forward = dtype_forward
-        self.dtype_backward = dtype_backward
+        self.__sax_backward = sax_backward.tocsr()
 
         # Set mask parameters
         self.mask_method = mask_method
@@ -81,12 +36,8 @@ class ArrayServer(object):
         # Define streaming features
         self.step_forward, self.step_backward = 0, 0
 
-    def propagate_all(self, pattern, ax_values=None, return_activations=False):
-        if ax_values is not None:
-            sax_res = pattern.propagate_values(self.__sax_forward, ax_values=ax_values)
-        else:
-            sax_res = pattern.propagate(self.__sax_forward, return_activations=return_activations)
-
+    def propagate_all(self, fg):
+        sax_res = fg.seq_propagate(self.__sax_forward)
         return sax_res
 
     def get_random_samples(self, n):
@@ -103,7 +54,7 @@ class ArrayServer(object):
 
     def count_unmasked(self,):
         if self.__ax_mask is None:
-            return self.__ax_mask.shape[0]
+            return self.__sax_forward.shape[0]
         else:
             return self.__ax_mask.sum()
 
@@ -127,7 +78,6 @@ class ArrayServer(object):
         self.step_forward, self.step_backward = step, step
 
     def recursive_positions(self, step, n, n_max):
-
         # Apply mask to data
         if self.__ax_mask is not None:
             ax_cum_mask = self.__ax_mask[step:].cumsum()
@@ -144,13 +94,6 @@ class ArrayServer(object):
 
         return ax_positions
 
-    def get_init_precision(self):
-        sax_masked_backward = self.__sax_backward.astype(int)
-        if self.__ax_mask is not None:
-            sax_masked_backward = sax_masked_backward[self.__ax_mask, :].astype(int)
-
-        return (sax_masked_backward > 0).sum(axis=0).A[0] / sax_masked_backward.shape[0]
-
     def next_forward(self, n=1, update_step=True):
 
         # get indices
@@ -162,7 +105,7 @@ class ArrayServer(object):
             sax_data = self.pattern_forward.propagate(sax_data)
 
         # Set data type
-        self.sax_data_forward = sax_data.astype(self.dtype_forward).tocsr()
+        self.sax_data_forward = sax_data
 
         # Compute new step of forward
         if update_step:
@@ -181,7 +124,7 @@ class ArrayServer(object):
             sax_data = self.pattern_backward.propagate(sax_data)
 
         # Set data type
-        self.sax_data_backward = sax_data.astype(self.dtype_backward).tocsc()
+        self.sax_data_backward = sax_data
 
         # Compute new step of backward
         if update_step:

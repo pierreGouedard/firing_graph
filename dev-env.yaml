@@ -1,0 +1,10 @@
+# Create env: conda env create -f dev-env.yaml
+name: fg-env
+dependencies:
+  - python==3.10
+  - ipython
+  - pip:
+    - numpy==1.23.0
+    - scipy==1.9.1
+    - matplotlib==3.5.2
+    - pytest==7.1.3
