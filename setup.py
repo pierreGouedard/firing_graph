@@ -1,4 +1,4 @@
-"""Builds the janeml package from the janeml folder.
+"""Builds the firing graph package from the fring graph folder.
 
 To do so run the command below in the root folder:
 pip install -e .
