@@ -36,6 +36,9 @@ class ArrayServer(object):
         # Define streaming features
         self.step_forward, self.step_backward = 0, 0
 
+    def get_raw_data(self):
+        return
+
     def propagate_all(self, fg):
         sax_res = fg.seq_propagate(self.__sax_forward)
         return sax_res
@@ -102,7 +105,7 @@ class ArrayServer(object):
 
         # Propagate in pattern if any
         if self.pattern_forward is not None:
-            sax_data = self.pattern_forward.propagate(sax_data)
+            sax_data = self.pattern_forward.seq_propagate(sax_data)
 
         # Set data type
         self.sax_data_forward = sax_data
@@ -113,6 +116,12 @@ class ArrayServer(object):
 
         return self
 
+    def next_all_forward(self):
+        return self.next_forward(self.count_unmasked(), update_step=False)
+
+    def next_all_backward(self):
+        return self.next_backward(self.count_unmasked(), update_step=False)
+
     def next_backward(self, n=1, update_step=True):
 
         # get indices
@@ -121,7 +130,7 @@ class ArrayServer(object):
 
         # Propagate in pattern if any
         if self.pattern_backward is not None:
-            sax_data = self.pattern_backward.propagate(sax_data)
+            sax_data = self.pattern_backward.seq_propagate(sax_data)
 
         # Set data type
         self.sax_data_backward = sax_data

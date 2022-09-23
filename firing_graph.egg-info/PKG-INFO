@@ -1,0 +1,7 @@
+Metadata-Version: 2.1
+Name: firing-graph
+Version: 2.0
+Summary: Package implementing firing-graph with basic functionality
+Author: Pierre Gouedard
+Author-email: pierre.gouedard@alumni.epfl.ch
+License-File: LICENSE

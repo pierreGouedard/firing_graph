@@ -7,13 +7,12 @@ import copy
 from numpy import int32
 
 # Local import
-from .linalg.forward import ftc, fto, fast_partitioned_ftc
+from .linalg.forward import ftc, fto
 
 
 class FiringGraph(object):
     def __init__(
             self, project, ax_levels, matrices, depth=2, graph_id=None, partitions=None,
-            input_partitions=None
     ):
 
         if graph_id is None:
@@ -30,7 +29,6 @@ class FiringGraph(object):
         # Save core data & metadata
         self.matrices = matrices
         self.refresh_matrices()
-        self.input_partitions = input_partitions
         self.partitions = partitions
 
         # Set backward tracking matrices
@@ -77,7 +75,7 @@ class FiringGraph(object):
     def from_dict(d_graph):
         return FiringGraph(**d_graph)
 
-    def seq_propagate(self, sax_i, max_bs=200000):
+    def seq_propagate(self, sax_i, max_bs=200000, fto_required=False):
 
         # Split works if toot
         if sax_i.shape[0] > max_bs:
@@ -90,18 +88,17 @@ class FiringGraph(object):
             return vstack(l_outputs)
 
         # Propagate input
-        if self.input_partitions is not None:
-            sax_c = fast_partitioned_ftc(self.input_partitions, sax_i, self.levels)
-        else:
-            sax_c = ftc(self.I, sax_i, self.C, csr_matrix((0, 0)), self.levels)
+        sax_c = ftc(self.I, sax_i, self.C, csr_matrix((0, 0)), self.levels)
 
         # Core transmit
         for i in range(self.depth - 2):
             sax_c = ftc(self.I, csr_matrix((0, 0)), self.C, sax_c, self.levels)
 
-        sax_o = fto(self.O, sax_c)
-
-        return sax_o
+        if fto_required:
+            sax_o = fto(self.O, sax_c)
+            return sax_o
+        else:
+            return sax_c
 
     def save_as_pickle(self, path):
         d_graph = self.to_dict()
