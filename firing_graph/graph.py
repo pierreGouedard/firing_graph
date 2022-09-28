@@ -7,7 +7,7 @@ import copy
 from numpy import int32
 
 # Local import
-from .linalg.forward import ftc, fto
+from .linalg.forward import fti, ftc, fto
 
 
 class FiringGraph(object):
@@ -75,7 +75,7 @@ class FiringGraph(object):
     def from_dict(d_graph):
         return FiringGraph(**d_graph)
 
-    def seq_propagate(self, sax_i, max_bs=200000, fto_required=False):
+    def seq_propagate(self, sax_i, max_bs=500000, fto_required=False):
 
         # Split works if toot
         if sax_i.shape[0] > max_bs:
@@ -88,11 +88,11 @@ class FiringGraph(object):
             return vstack(l_outputs)
 
         # Propagate input
-        sax_c = ftc(self.I, sax_i, self.C, csr_matrix((0, 0)), self.levels)
+        sax_c = fti(self.I, sax_i, self.levels)
 
         # Core transmit
         for i in range(self.depth - 2):
-            sax_c = ftc(self.I, csr_matrix((0, 0)), self.C, sax_c, self.levels)
+            sax_c = ftc(self.C, sax_c, self.levels)
 
         if fto_required:
             sax_o = fto(self.O, sax_c)

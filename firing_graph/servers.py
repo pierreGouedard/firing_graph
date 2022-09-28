@@ -17,8 +17,16 @@ class ArrayServer(object):
         self.n_inputs = sax_forward.shape[1]
 
         # Set sparse signals
-        self.__sax_forward = sax_forward.tocsr()
-        self.__sax_backward = sax_backward.tocsr()
+        self.sax_forward = sax_forward.tocsr()
+        self.sax_backward = sax_backward.tocsr()
+
+        self.sax_pattern_forward = None
+        if pattern_forward is not None:
+            self.sax_pattern_forward = pattern_forward.seq_propagate(self.sax_forward)
+
+        self.sax_pattern_backward = None
+        if pattern_backward is not None:
+            self.sax_pattern_backward = pattern_backward.seq_propagate(self.sax_backward)
 
         # Set mask parameters
         self.mask_method = mask_method
@@ -36,28 +44,28 @@ class ArrayServer(object):
         # Define streaming features
         self.step_forward, self.step_backward = 0, 0
 
-    def get_raw_data(self):
-        return
-
-    def propagate_all(self, fg):
-        sax_res = fg.seq_propagate(self.__sax_forward)
-        return sax_res
+    def update_pattern_backward(self, pattern_backward):
+        self.pattern_backward = pattern_backward
+        self.sax_pattern_backward = pattern_backward.seq_propagate(self.sax_backward)
 
     def get_random_samples(self, n):
         if self.__ax_mask is not None:
             l_pool = list(self.__ax_mask.nonzero()[0])
 
         else:
-            l_pool = list(set(range(self.__sax_forward.shape[0])))
+            l_pool = list(set(range(self.sax_forward.shape[0])))
 
+        # For test only
+        #l_pool = self.sax_backward[:, 1].nonzero()[0]
+        
         return self.get_sub_forward([choice(l_pool) for _ in range(n)])
 
     def get_sub_forward(self, indices):
-        return self.__sax_forward[indices, :]
+        return self.sax_forward[indices, :]
 
     def count_unmasked(self,):
         if self.__ax_mask is None:
-            return self.__sax_forward.shape[0]
+            return self.sax_forward.shape[0]
         else:
             return self.__ax_mask.sum()
 
@@ -100,19 +108,16 @@ class ArrayServer(object):
     def next_forward(self, n=1, update_step=True):
 
         # get indices
-        ax_indices = self.recursive_positions(self.step_forward, n, self.__sax_forward.shape[0])
-        sax_data = self.__sax_forward[ax_indices, :]
+        ax_indices = self.recursive_positions(self.step_forward, n, self.sax_forward.shape[0])
 
-        # Propagate in pattern if any
-        if self.pattern_forward is not None:
-            sax_data = self.pattern_forward.seq_propagate(sax_data)
-
-        # Set data type
-        self.sax_data_forward = sax_data
+        if self.sax_pattern_forward is not None:
+            self.sax_data_forward = self.sax_pattern_forward[ax_indices, :]
+        else:
+            self.sax_data_forward = self.sax_forward[ax_indices, :]
 
         # Compute new step of forward
         if update_step:
-            self.step_forward = (ax_indices[-1] + 1) % self.__sax_forward.shape[0]
+            self.step_forward = (ax_indices[-1] + 1) % self.sax_forward.shape[0]
 
         return self
 
@@ -125,19 +130,16 @@ class ArrayServer(object):
     def next_backward(self, n=1, update_step=True):
 
         # get indices
-        ax_indices = self.recursive_positions(self.step_backward, n, self.__sax_forward.shape[0])
-        sax_data = self.__sax_backward[ax_indices, :]
+        ax_indices = self.recursive_positions(self.step_backward, n, self.sax_forward.shape[0])
 
-        # Propagate in pattern if any
-        if self.pattern_backward is not None:
-            sax_data = self.pattern_backward.seq_propagate(sax_data)
-
-        # Set data type
-        self.sax_data_backward = sax_data
+        if self.sax_pattern_backward is not None:
+            self.sax_data_backward = self.sax_pattern_backward[ax_indices, :]
+        else:
+            self.sax_data_backward = self.sax_backward[ax_indices, :]
 
         # Compute new step of backward
         if update_step:
-            self.step_backward = (ax_indices[-1] + 1) % self.__sax_forward.shape[0]
+            self.step_backward = (ax_indices[-1] + 1) % self.sax_forward.shape[0]
 
         return self
 

@@ -3,7 +3,7 @@ from scipy.sparse import csr_matrix
 import numpy as np
 
 # Local import
-from .linalg.forward import ftc, fpo
+from .linalg.forward import fti, fpo
 from .linalg.backward import bui
 
 
@@ -25,17 +25,10 @@ class FiringGraphDrainer(object):
         self.iter = 0
 
     def reset(self, server=False):
-
         self.sax_i, self.sax_c, self.sax_cb = init_forward_signal(self.firing_graph, self.bs)
         self.iter = 0
         if server:
             self.server.stream_features()
-
-    def drain_all(self, n_max=10000):
-        self.drain(n=n_max // self.bs + 1)
-        self.reset()
-        print("[Drainer]: {} samples has been propagated through firing graph".format(n_max))
-        return self
 
     def drain(self, n=1):
         early_stopping, j = False, 0
@@ -72,10 +65,7 @@ class FiringGraphDrainer(object):
         self.sax_i = self.server.next_forward(n=self.bs).sax_data_forward
 
         # transmit to core vertices
-        self.sax_c = ftc(
-            self.firing_graph.I, self.sax_i, self.firing_graph.C, csr_matrix((0, 0)),
-            self.firing_graph.levels
-        )
+        self.sax_c = fti(self.firing_graph.I, self.sax_i, self.firing_graph.levels)
 
         # Compute feedback
         self.sax_cb = fpo(self.sax_c, self.server.next_backward(n=self.bs).sax_data_backward, self.ax_p, self.ax_r)
