@@ -22,7 +22,7 @@ class TestFiringGraph(unittest.TestCase):
         d_matrices = self.build_matrices(d_graphs[8]['I'])
         self.signal2 = self.build_signals(d_signals[10])
         self.fg2 = FiringGraph(
-            'test2', np.array(d_graphs[8]['levels']), d_matrices, input_partitions=d_graphs[8]['input_partitions']
+            'test2', np.array(d_graphs[8]['levels']), d_matrices, meat=d_graphs[8]['input_meta']
         )
 
         # Todo: FG depth > 2

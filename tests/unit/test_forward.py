@@ -33,7 +33,7 @@ class TestForward(unittest.TestCase):
         d_matrices = self.build_matrices(d_graphs[4]['I'], d_graphs[4]['C'], d_graphs[4]['O'])
         self.signal4 = self.build_signals(d_signals[4])
         self.fg4 = FiringGraph(
-            'test4', np.array(d_graphs[4]['levels']), d_matrices, input_partitions=d_graphs[4]['input_partitions']
+            'test4', np.array(d_graphs[4]['levels']), d_matrices, meta=d_graphs[4]['input_meta']
         )
 
         # FPO tests
@@ -97,7 +97,7 @@ class TestForward(unittest.TestCase):
         python -m unittest tests.unit.test_forward.TestForward.test_partitioned_ftc
         """
         # Test4 run
-        sax_res = fast_partitioned_ftc(self.fg4.input_partitions, self.signal4['i'], self.fg4.levels)
+        sax_res = fast_partitioned_ftc(self.fg4.meta, self.signal4['i'], self.fg4.levels)
 
         # Test4 validation
         self.assertTrue((sax_res.A == self.signal4['e']).all())

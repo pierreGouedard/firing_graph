@@ -6,8 +6,8 @@ import numpy as np
 from sparse_dot_mkl import dot_product_mkl
 
 
-def seq_test(sax_i, sax_I, l_input_partitions):
-    for k, l_parts in enumerate(l_input_partitions):
+def seq_test(sax_i, sax_I, l_input_meta):
+    for k, l_parts in enumerate(l_input_meta):
         s, e = l_parts[0]
         ax_mask = sax_i[:, s:e].dot(sax_I[s:e, k]).A[:, 0]
         if not ax_mask.any():
@@ -38,20 +38,20 @@ if __name__ == '__main__':
     #   It can be through driver pycuda & Cie or directly using tensorflow operation.
 
     # Get fake signals
-    l_all_partitions = [(i * 50, (i + 1) * 50) for i in range(20)]
+    l_all_meta = [(i * 50, (i + 1) * 50) for i in range(20)]
     sax_i = csr_matrix(np.random.binomial(1, 0.001, 500000).astype(bool))
     sax_i = sax_i.T[:, [0] * 1000]
     sax_I = csr_matrix(np.random.binomial(1, 0.01, (1000, 600)).astype(bool))
     ax_levels = np.random.randint(0, 5, (600,))
-    l_input_partitions = [
-        [(s, e) for s, e in choices(l_all_partitions, k=np.random.randint(1, 4))] for _ in range(600)
+    l_input_meta = [
+        [(s, e) for s, e in choices(l_all_meta, k=np.random.randint(1, 4))] for _ in range(600)
     ]
 
     # Sequential
     import time
     print('seq partitioned')
     t0 = time.time()
-    sax_res = hstack([x for x in seq_test(sax_i, sax_I, l_input_partitions)], format='csr')
+    sax_res = hstack([x for x in seq_test(sax_i, sax_I, l_input_meta)], format='csr')
     diff = time.time() - t0
     print(f'sequ: {diff}')
 
@@ -96,7 +96,7 @@ if __name__ == '__main__':
 
 
     # Create new threads
-    threads = [MyThread(i, l_sub_parts) for i, l_sub_parts in enumerate(l_input_partitions)]
+    threads = [MyThread(i, l_sub_parts) for i, l_sub_parts in enumerate(l_input_meta)]
 
     # Start new Threads
     for t in threads:

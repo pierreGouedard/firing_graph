@@ -197,7 +197,7 @@ d_graphs = {
         "C": None,
         "O": None,
         "levels": [1, 2, 2, 1],
-        "input_partitions": [
+        "input_meta": [
             [
                 (0, 10, csc_matrix([0, 0, 0, 0, 0, 1, 1, 1, 0, 0], dtype=bool).T),
                 (20, 30, csc_matrix([1, 1, 1, 0, 0, 0, 0, 0, 0, 0], dtype=bool).T)
@@ -270,7 +270,7 @@ d_graphs = {
         "C": None,
         "O": None,
         "levels": [1, 2, 2, 1],
-        "input_partitions": [
+        "input_meta": [
             [
                 (0, 10, csc_matrix([0, 0, 0, 0, 0, 1, 1, 1, 0, 0], dtype=bool).T),
                 (20, 30, csc_matrix([1, 1, 1, 0, 0, 0, 0, 0, 0, 0], dtype=bool).T)
@@ -307,7 +307,7 @@ d_graphs = {
         "C": None,
         "O": None,
         "levels": [1, 2, 2, 1],
-        "input_partitions": [
+        "input_meta": [
             [
                 (0, 10, csc_matrix([0, 0, 0, 0, 0, 1, 1, 1, 0, 0], dtype=bool).T),
                 (20, 30, csc_matrix([1, 1, 1, 0, 0, 0, 0, 0, 0, 0], dtype=bool).T)

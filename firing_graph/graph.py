@@ -12,7 +12,7 @@ from .linalg.forward import fti, ftc, fto
 
 class FiringGraph(object):
     def __init__(
-            self, project, ax_levels, matrices, depth=2, graph_id=None, partitions=None,
+            self, project, ax_levels, matrices, depth=2, graph_id=None, meta=None,
     ):
 
         if graph_id is None:
@@ -29,7 +29,7 @@ class FiringGraph(object):
         # Save core data & metadata
         self.matrices = matrices
         self.refresh_matrices()
-        self.partitions = partitions
+        self.meta = meta
 
         # Set backward tracking matrices
         self.backward_firing = csr_matrix(matrices['I'].shape, dtype=int32)
@@ -75,7 +75,7 @@ class FiringGraph(object):
     def from_dict(d_graph):
         return FiringGraph(**d_graph)
 
-    def seq_propagate(self, sax_i, max_bs=500000, fto_required=False):
+    def seq_propagate(self, sax_i, max_bs=5000000, fto_required=False):
 
         # Split works if toot
         if sax_i.shape[0] > max_bs:
@@ -114,13 +114,13 @@ class FiringGraph(object):
             'matrices': self.matrices,
             'ax_levels': self.levels,
             'depth': self.depth,
-            'partitions': self.partitions
+            'meta': self.meta
         }
 
         if deep_copy:
             d_graph.update({
                 'matrices': copy.deepcopy(self.matrices), 'ax_levels': self.levels.copy(),
-                'partitions': copy.deepcopy(self.partitions)
+                'meta': copy.deepcopy(self.meta)
             })
 
         return d_graph

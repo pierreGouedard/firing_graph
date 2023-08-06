@@ -19,7 +19,7 @@ class TestDrainer(unittest.TestCase):
             csr_matrix(d_signals[11]['input'], dtype=bool), csr_matrix(d_signals[11]['got'], dtype=bool)
         )
         fg = FiringGraph(
-            'test', np.array(d_graphs[9]['levels']), d_matrices, input_partitions=d_graphs[4]['input_partitions']
+            'test', np.array(d_graphs[9]['levels']), d_matrices, meta=d_graphs[4]['input_meta']
         )
         self.signal1 = self.build_signals(d_signals[11])
         self.drainer = FiringGraphDrainer(
